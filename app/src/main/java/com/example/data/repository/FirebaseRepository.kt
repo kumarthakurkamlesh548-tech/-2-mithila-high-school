@@ -10,9 +10,9 @@ import kotlinx.coroutines.tasks.await
 
 class FirebaseRepository {
 
-    private val auth = FirebaseConfig.auth
-    private val firestore = FirebaseConfig.db
-    private val storage = FirebaseConfig.storage
+    private val auth get() = FirebaseConfig.auth
+    private val firestore get() = FirebaseConfig.db
+    private val storage get() = FirebaseConfig.storage
 
     companion object {
         private const val TAG = "FirebaseRepository"
@@ -44,9 +44,10 @@ class FirebaseRepository {
         bytes: ByteArray,
         mimeType: String = "application/pdf"
     ): Result<String> {
+        val st = storage ?: return Result.failure(IllegalStateException("Firebase Storage not available"))
         return try {
             val path = "$folderName/${System.currentTimeMillis()}_$fileName"
-            val ref = storage.reference.child(path)
+            val ref = st.reference.child(path)
             val metadata = com.google.firebase.storage.StorageMetadata.Builder()
                 .setContentType(mimeType)
                 .build()
@@ -156,14 +157,18 @@ class FirebaseRepository {
             return Result.success(superAdminUser)
         }
 
+        val fs = firestore ?: return Result.failure(IllegalStateException("Firestore not available"))
+
         return try {
-            try {
-                auth.signInWithEmailAndPassword(cleanEmail, password).await()
-            } catch (e: Exception) {
-                Log.w(TAG, "Firebase Auth sign-in attempt/fallback: ${e.message}")
+            auth?.let { au ->
+                try {
+                    au.signInWithEmailAndPassword(cleanEmail, password).await()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Firebase Auth sign-in attempt/fallback: ${e.message}")
+                }
             }
 
-            val querySnapshot = firestore.collection(USERS_COLLECTION)
+            val querySnapshot = fs.collection(USERS_COLLECTION)
                 .whereEqualTo("email", cleanEmail)
                 .get()
                 .await()
@@ -186,7 +191,7 @@ class FirebaseRepository {
             }
 
             val newUser = UserEntity(
-                id = auth.currentUser?.uid ?: "usr_${System.currentTimeMillis()}",
+                id = auth?.currentUser?.uid ?: "usr_${System.currentTimeMillis()}",
                 name = if (inferredRole == UserRole.TEACHER) "Teacher ${cleanEmail.substringBefore("@")}"
                        else if (inferredRole == UserRole.ADMIN) "Admin ${cleanEmail.substringBefore("@")}"
                        else "Student ${cleanEmail.substringBefore("@")}",
@@ -207,11 +212,13 @@ class FirebaseRepository {
         val cleanEmail = email.trim().lowercase()
         return try {
             var uid = "usr_${System.currentTimeMillis()}"
-            try {
-                val authResult = auth.createUserWithEmailAndPassword(cleanEmail, password).await()
-                authResult.user?.uid?.let { uid = it }
-            } catch (e: Exception) {
-                Log.w(TAG, "Firebase Auth registration fallback: ${e.message}")
+            auth?.let { au ->
+                try {
+                    val authResult = au.createUserWithEmailAndPassword(cleanEmail, password).await()
+                    authResult.user?.uid?.let { uid = it }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Firebase Auth registration fallback: ${e.message}")
+                }
             }
 
             val newUser = UserEntity(
@@ -239,7 +246,7 @@ class FirebaseRepository {
 
     suspend fun sendPasswordReset(email: String): Result<Boolean> {
         return try {
-            auth.sendPasswordResetEmail(email.trim().lowercase()).await()
+            auth?.sendPasswordResetEmail(email.trim().lowercase())?.await()
             Result.success(true)
         } catch (e: Exception) {
             Result.success(true)
@@ -247,8 +254,9 @@ class FirebaseRepository {
     }
 
     suspend fun saveUserToFirestore(user: UserEntity) {
+        val fs = firestore ?: return
         try {
-            firestore.collection(USERS_COLLECTION)
+            fs.collection(USERS_COLLECTION)
                 .document(user.id)
                 .set(userToMap(user))
                 .await()
@@ -258,8 +266,9 @@ class FirebaseRepository {
     }
 
     suspend fun saveStudentToFirestore(user: UserEntity) {
+        val fs = firestore ?: return
         try {
-            firestore.collection(STUDENTS_COLLECTION)
+            fs.collection(STUDENTS_COLLECTION)
                 .document(user.id)
                 .set(userToMap(user))
                 .await()
@@ -269,8 +278,9 @@ class FirebaseRepository {
     }
 
     suspend fun saveTeacherToFirestore(user: UserEntity) {
+        val fs = firestore ?: return
         try {
-            firestore.collection(TEACHERS_COLLECTION)
+            fs.collection(TEACHERS_COLLECTION)
                 .document(user.id)
                 .set(userToMap(user))
                 .await()
@@ -280,6 +290,7 @@ class FirebaseRepository {
     }
 
     suspend fun updateAdminPermissions(userId: String, permissions: AdminPermissions) {
+        val fs = firestore ?: return
         try {
             val permMap = mapOf(
                 "manageResults" to permissions.manageResults,
@@ -295,7 +306,7 @@ class FirebaseRepository {
                 "manageDownloads" to permissions.manageDownloads,
                 "manageSyllabus" to permissions.manageSyllabus
             )
-            firestore.collection(USERS_COLLECTION).document(userId)
+            fs.collection(USERS_COLLECTION).document(userId)
                 .update("permissions", permMap)
                 .await()
         } catch (e: Exception) {
@@ -304,8 +315,9 @@ class FirebaseRepository {
     }
 
     suspend fun updateUserStatus(userId: String, isEnabled: Boolean) {
+        val fs = firestore ?: return
         try {
-            firestore.collection(USERS_COLLECTION).document(userId)
+            fs.collection(USERS_COLLECTION).document(userId)
                 .update("isEnabled", isEnabled)
                 .await()
         } catch (e: Exception) {
@@ -314,8 +326,9 @@ class FirebaseRepository {
     }
 
     suspend fun updateUserRole(userId: String, newRole: UserRole) {
+        val fs = firestore ?: return
         try {
-            firestore.collection(USERS_COLLECTION).document(userId)
+            fs.collection(USERS_COLLECTION).document(userId)
                 .update("role", newRole.name)
                 .await()
         } catch (e: Exception) {
@@ -324,8 +337,9 @@ class FirebaseRepository {
     }
 
     suspend fun deleteUser(userId: String) {
+        val fs = firestore ?: return
         try {
-            firestore.collection(USERS_COLLECTION).document(userId)
+            fs.collection(USERS_COLLECTION).document(userId)
                 .delete()
                 .await()
         } catch (e: Exception) {
@@ -334,7 +348,13 @@ class FirebaseRepository {
     }
 
     fun getAllUsersFlow(): Flow<List<UserEntity>> = callbackFlow {
-        val registration = firestore.collection(USERS_COLLECTION)
+        val fs = firestore
+        if (fs == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        val registration = fs.collection(USERS_COLLECTION)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -352,7 +372,8 @@ class FirebaseRepository {
     // NOTICES FIRESTORE INTEGRATION
     // ==========================================
     suspend fun saveNoticeToFirestore(title: String, content: String, category: String, postedBy: String = "Principal Office"): String {
-        val docRef = firestore.collection(NOTICES_COLLECTION).document()
+        val fs = firestore ?: return "ntc_${System.currentTimeMillis()}"
+        val docRef = fs.collection(NOTICES_COLLECTION).document()
         val data = mapOf(
             "title" to title,
             "content" to content,
@@ -432,10 +453,11 @@ class FirebaseRepository {
     }
 
     suspend fun saveResultToFirestore(result: ResultEntity): String {
+        val fs = firestore ?: return "res_${System.currentTimeMillis()}"
         val docRef = if (result.firebaseId.isNotBlank()) {
-            firestore.collection(RESULTS_COLLECTION).document(result.firebaseId)
+            fs.collection(RESULTS_COLLECTION).document(result.firebaseId)
         } else {
-            firestore.collection(RESULTS_COLLECTION).document()
+            fs.collection(RESULTS_COLLECTION).document()
         }
         docRef.set(resultToMap(result)).await()
         return docRef.id
@@ -443,8 +465,9 @@ class FirebaseRepository {
 
     suspend fun updateResultPublishedStatus(firebaseId: String, isPublished: Boolean) {
         if (firebaseId.isBlank()) return
+        val fs = firestore ?: return
         try {
-            firestore.collection(RESULTS_COLLECTION).document(firebaseId)
+            fs.collection(RESULTS_COLLECTION).document(firebaseId)
                 .update("isPublished", isPublished)
                 .await()
         } catch (e: Exception) {
@@ -454,8 +477,9 @@ class FirebaseRepository {
 
     suspend fun deleteResultFromFirestore(firebaseId: String) {
         if (firebaseId.isBlank()) return
+        val fs = firestore ?: return
         try {
-            firestore.collection(RESULTS_COLLECTION).document(firebaseId).delete().await()
+            fs.collection(RESULTS_COLLECTION).document(firebaseId).delete().await()
         } catch (e: Exception) {
             Log.e(TAG, "Failed deleting result from Firestore: ${e.message}")
         }
@@ -467,9 +491,10 @@ class FirebaseRepository {
         examName: String,
         rollNumber: String
     ): ResultEntity? {
+        val fs = firestore ?: return null
         return try {
             val cleanRoll = rollNumber.trim()
-            val query = firestore.collection(RESULTS_COLLECTION)
+            val query = fs.collection(RESULTS_COLLECTION)
                 .whereEqualTo("className", className)
                 .whereEqualTo("examName", examName)
                 .whereEqualTo("rollNumber", cleanRoll)
@@ -492,7 +517,13 @@ class FirebaseRepository {
     }
 
     fun getResultsFlow(): Flow<List<ResultEntity>> = callbackFlow {
-        val registration = firestore.collection(RESULTS_COLLECTION)
+        val fs = firestore
+        if (fs == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        val registration = fs.collection(RESULTS_COLLECTION)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)

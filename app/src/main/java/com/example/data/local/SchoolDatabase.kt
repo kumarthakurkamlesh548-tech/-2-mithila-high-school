@@ -61,7 +61,11 @@ abstract class SchoolDatabase : RoomDatabase() {
                 super.onCreate(db)
                 INSTANCE?.let { database ->
                     CoroutineScope(Dispatchers.IO).launch {
-                        seedData(database.schoolDao())
+                        try {
+                            seedData(database.schoolDao())
+                        } catch (e: Exception) {
+                            android.util.Log.e("SchoolDatabase", "Error seeding database: ${e.message}", e)
+                        }
                     }
                 }
             }

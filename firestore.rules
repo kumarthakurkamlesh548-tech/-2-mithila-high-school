@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for security checks
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserData().role == 'SUPER_ADMIN';
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (getUserData().role == 'ADMIN' || getUserData().role == 'SUPER_ADMIN');
+    }
+
+    function hasPermission(permissionName) {
+      return isSuperAdmin() || (isAdmin() && getUserData().permissions[permissionName] == true);
+    }
+
+    // User documents security
+    match /users/{userId} {
+      // Authenticated users can read user profiles
+      allow read: if isAuthenticated();
+
+      // Only Super Admin can create admins or modify roles/permissions
+      // Regular users can only update their own non-sensitive profile details
+      allow create: if isAuthenticated() && (
+        isSuperAdmin() || 
+        (request.auth.uid == userId && request.resource.data.role != 'SUPER_ADMIN' && request.resource.data.role != 'ADMIN')
+      );
+
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        (request.auth.uid == userId && 
+         request.resource.data.role == resource.data.role && 
+         request.resource.data.permissions == resource.data.permissions &&
+         request.resource.data.isEnabled == resource.data.isEnabled)
+      );
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // Notices security
+    match /notices/{noticeId} {
+      allow read: if isAuthenticated();
+      allow write: if hasPermission('manageNotices');
+    }
+
+    // Results security
+    match /results/{resultId} {
+      allow read: if isAuthenticated();
+      allow write: if hasPermission('manageResults');
+    }
+
+    // Homework security
+    match /homework/{homeworkId} {
+      allow read: if isAuthenticated();
+      allow write: if hasPermission('manageHomework');
+    }
+
+    // Study Materials security
+    match /study_materials/{materialId} {
+      allow read: if isAuthenticated();
+      allow write: if hasPermission('manageStudyMaterial');
+    }
+
+    // Attendance security
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow write: if hasPermission('manageAttendance');
+    }
+
+    // Timetable security
+    match /timetables/{timetableId} {
+      allow read: if isAuthenticated();
+      allow write: if hasPermission('manageTimetable');
+    }
+
+    // Default catch-all rule
+    match /{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+  }
+}

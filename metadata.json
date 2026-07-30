@@ -1,0 +1,6 @@
+{
+  "name": "+2 Government Mithila High School",
+  "description": "Comprehensive School Management App for +2 Government Mithila High School Balaur, Darbhanga",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

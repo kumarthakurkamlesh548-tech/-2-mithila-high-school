@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserData().role == "SUPER_ADMIN";
+    }
+    function isAdmin() {
+      return isAuthenticated() && (getUserData().role == "ADMIN" || getUserData().role == "SUPER_ADMIN");
+    }
+    function isTeacher() {
+      return isAuthenticated() && (getUserData().role == "TEACHER" || isAdmin());
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isSuperAdmin() || (isAuthenticated() && request.auth.uid == userId);
+    }
+
+    // Students
+    match /students/{studentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Teachers
+    match /teachers/{teacherId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // Notices
+    match /notices/{noticeId} {
+      allow read: if true;
+      allow write: if isTeacher();
+    }
+
+    // Results
+    match /results/{resultId} {
+      allow read: if true;
+      allow write: if isTeacher();
+    }
+
+    // Study Materials
+    match /study_materials/{materialId} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher();
+    }
+
+    // Homework
+    match /homework/{homeworkId} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher();
+    }
+
+    // Attendance
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher();
+    }
+
+    // Timetables
+    match /timetables/{timetableId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Doubts
+    match /doubts/{doubtId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isTeacher() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
+    }
+
+    // Events
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

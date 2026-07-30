@@ -32,8 +32,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Ensure Gradle Wrapper
+      - name: Ensure Gradle Wrapper & Keystore
         run: |
+          if [ -f debug.keystore.base64 ]; then
+            echo "Decoding debug.keystore.base64..."
+            base64 -d debug.keystore.base64 > debug.keystore
+          fi
           if [ ! -f gradlew ]; then
             echo "Generating Gradle wrapper..."
             gradle wrapper

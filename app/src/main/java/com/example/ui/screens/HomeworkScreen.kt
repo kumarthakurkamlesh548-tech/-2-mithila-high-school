@@ -115,6 +115,32 @@ fun HomeworkScreen(
                                 lineHeight = 18.sp
                             )
 
+                            if (hw.driveUrl.isNotBlank()) {
+                                val context = androidx.compose.ui.platform.LocalContext.current
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        val url = hw.driveUrl.trim()
+                                        if (url.startsWith("http://") || url.startsWith("https://")) {
+                                            try {
+                                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                snackbarMsg = "Unable to open Drive link"
+                                            }
+                                        } else {
+                                            snackbarMsg = "Drive Link: $url"
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.FileUpload, contentDescription = "Drive Link", tint = PrimaryBlue)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Open Google Drive Reference File", fontSize = 12.sp, color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
                             Spacer(modifier = Modifier.height(10.dp))
 
                             Row(
@@ -131,15 +157,15 @@ fun HomeworkScreen(
                                 Button(
                                     onClick = {
                                         submittedHomeworkIds = submittedHomeworkIds + hw.id
-                                        snackbarMsg = "Homework '${hw.title}' submitted successfully!"
+                                        snackbarMsg = "Homework '${hw.title}' marked as completed!"
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
                                 ) {
-                                    Icon(Icons.Default.FileUpload, contentDescription = "Upload")
+                                    Icon(Icons.Default.CheckCircle, contentDescription = "Complete")
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Upload & Submit Homework", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Mark Completed", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             } else {
                                 OutlinedButton(
@@ -150,7 +176,7 @@ fun HomeworkScreen(
                                 ) {
                                     Icon(Icons.Default.CheckCircle, contentDescription = "Done", tint = Color(0xFF10B981))
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Already Submitted", fontSize = 12.sp, color = Color(0xFF10B981))
+                                    Text("Completed", fontSize = 12.sp, color = Color(0xFF10B981))
                                 }
                             }
                         }

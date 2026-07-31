@@ -50,7 +50,8 @@ data class NoticeEntity(
     val content: String,
     val date: String,
     val category: String, // Urgent, Academic, Exam, General
-    val postedBy: String = "Principal Office"
+    val postedBy: String = "Principal Office",
+    val driveUrl: String = ""
 )
 
 @Entity(tableName = "results")
@@ -112,7 +113,8 @@ data class HomeworkEntity(
     val description: String,
     val dueDate: String,
     val assignedBy: String,
-    val datePosted: String
+    val datePosted: String,
+    val driveUrl: String = ""
 )
 
 @Entity(tableName = "homework_submissions")
@@ -152,13 +154,17 @@ data class TimetableEntity(
 @Entity(tableName = "doubts")
 data class DoubtEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val firebaseId: String = "",
     val studentId: String,
     val studentName: String,
     val className: String,
     val subject: String,
     val question: String,
     val date: String,
-    val status: String = "Pending" // Pending, Answered
+    val status: String = "Pending", // Pending, Answered
+    val replyText: String = "",
+    val repliedBy: String = "",
+    val replyDate: String = ""
 )
 
 @Entity(tableName = "doubt_replies")
@@ -196,5 +202,6 @@ data class DownloadEntity(
     val title: String,
     val category: String, // Form, Admit Card, Circular, Board Notification
     val fileSize: String,
-    val fileType: String = "PDF"
+    val fileType: String = "PDF",
+    val driveUrl: String = ""
 )

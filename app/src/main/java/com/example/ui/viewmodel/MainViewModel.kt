@@ -85,6 +85,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+
+        viewModelScope.launch {
+            firebaseRepository.getDoubtsFlow().collect { remoteDoubts ->
+                remoteDoubts.forEach { remoteDoubt ->
+                    repository.askDoubt(remoteDoubt)
+                }
+            }
+        }
     }
 
     // Current User State
@@ -360,22 +368,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun askDoubt(subject: String, question: String) {
         viewModelScope.launch {
             val user = _currentUser.value ?: return@launch
-            repository.askDoubt(
-                DoubtEntity(
-                    studentId = user.id,
-                    studentName = user.name,
-                    className = user.className,
-                    subject = subject,
-                    question = question,
-                    date = "30 July 2026"
-                )
+            val doubt = DoubtEntity(
+                studentId = user.id,
+                studentName = user.name,
+                className = user.className,
+                subject = subject,
+                question = question,
+                date = "30 July 2026"
             )
+            val docId = firebaseRepository.saveDoubtToFirestore(doubt)
+            repository.askDoubt(doubt.copy(firebaseId = docId))
         }
     }
 
     fun replyDoubt(doubtId: Int, replyText: String) {
         viewModelScope.launch {
             val user = _currentUser.value ?: return@launch
+            val targetDoubt = doubts.value.find { it.id == doubtId }
+            val firebaseId = targetDoubt?.firebaseId ?: ""
+
+            if (firebaseId.isNotBlank()) {
+                firebaseRepository.replyDoubtInFirestore(
+                    firebaseId = firebaseId,
+                    replyText = replyText,
+                    repliedBy = user.name,
+                    replyDate = "30 July 2026"
+                )
+            }
+
             repository.replyDoubt(
                 DoubtReplyEntity(
                     doubtId = doubtId,

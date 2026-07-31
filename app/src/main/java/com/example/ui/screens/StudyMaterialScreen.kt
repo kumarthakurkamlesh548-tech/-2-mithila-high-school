@@ -170,17 +170,28 @@ fun StudyMaterialScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
+                            val context = androidx.compose.ui.platform.LocalContext.current
                             Button(
                                 onClick = {
-                                    snackbarMsg = "Opened ${mat.title}!"
+                                    val url = mat.fileOrVideoUrl.trim()
+                                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                                        try {
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            snackbarMsg = "Unable to open link: ${e.message}"
+                                        }
+                                    } else {
+                                        snackbarMsg = "Drive Link: $url"
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
                             ) {
-                                Icon(Icons.Default.Download, contentDescription = "Open")
+                                Icon(Icons.Default.Download, contentDescription = "Open Drive")
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Open & Download File", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("Open Google Drive Link", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }

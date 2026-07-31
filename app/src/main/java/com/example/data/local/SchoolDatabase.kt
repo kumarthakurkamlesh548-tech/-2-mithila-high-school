@@ -29,7 +29,7 @@ import androidx.room.TypeConverters
         EventEntity::class,
         DownloadEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

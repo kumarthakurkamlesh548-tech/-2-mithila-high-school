@@ -74,17 +74,27 @@ fun DownloadsScreen(
 
                         Button(
                             onClick = {
-                                DownloadUtils.saveToDownloads(
-                                    context = context,
-                                    filename = "${item.title.replace(" ", "_")}.pdf",
-                                    content = "OFFICIAL DOCUMENT: ${item.title}\nCategory: ${item.category}\nSchool: +2 Govt Mithila High School Balaur, Darbhanga\nDate: 2026\nStatus: Official Verified Form"
-                                )
-                                snackbarMsg = "Saved ${item.title} to Downloads folder!"
+                                val url = item.driveUrl.trim()
+                                if (url.startsWith("http://") || url.startsWith("https://")) {
+                                    try {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        snackbarMsg = "Unable to open Drive link"
+                                    }
+                                } else {
+                                    DownloadUtils.saveToDownloads(
+                                        context = context,
+                                        filename = "${item.title.replace(" ", "_")}.pdf",
+                                        content = "OFFICIAL DOCUMENT: ${item.title}\nCategory: ${item.category}\nSchool: +2 Govt Mithila High School Balaur, Darbhanga\nDate: 2026\nStatus: Official Verified Form"
+                                    )
+                                    snackbarMsg = "Saved ${item.title} to Downloads folder!"
+                                }
                             },
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
                         ) {
-                            Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Download, contentDescription = "Download / Drive", tint = Color.White, modifier = Modifier.size(16.dp))
                         }
                     }
                 }

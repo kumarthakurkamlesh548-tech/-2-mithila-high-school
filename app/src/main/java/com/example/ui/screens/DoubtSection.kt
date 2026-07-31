@@ -157,10 +157,30 @@ fun DoubtSection(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(text = doubt.question, fontSize = 13.sp, color = Color(0xFF1E293B), lineHeight = 18.sp)
 
+                        if (doubt.replyText.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF10B981).copy(alpha = 0.1f))
+                                    .padding(10.dp)
+                            ) {
+                                Text(
+                                    text = "Answer by ${if (doubt.repliedBy.isNotBlank()) doubt.repliedBy else "Teacher/Admin"}:",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF047857)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = doubt.replyText, fontSize = 12.sp, color = Color(0xFF065F46))
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Teacher Reply Box
-                        if (userRole == UserRole.TEACHER || userRole == UserRole.ADMIN) {
+                        // Teacher / Admin / Super Admin Reply Box
+                        if (userRole == UserRole.TEACHER || userRole == UserRole.ADMIN || userRole == UserRole.SUPER_ADMIN) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -168,7 +188,7 @@ fun DoubtSection(
                                     .background(SecondaryBlue.copy(alpha = 0.4f))
                                     .padding(10.dp)
                             ) {
-                                Text(text = "Teacher Reply Portal", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = PrimaryDarkBlue)
+                                Text(text = "Teacher / Admin Reply Portal", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = PrimaryDarkBlue)
                                 Spacer(modifier = Modifier.height(6.dp))
                                 OutlinedTextField(
                                     value = currentReplyText,

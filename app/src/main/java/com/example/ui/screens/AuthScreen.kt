@@ -133,34 +133,34 @@ fun AuthScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     if (selectedTab == 1) { // Sign Up Fields
-                        Text(
-                            text = "Register Account Type:",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF475569)
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        Surface(
+                            color = PrimaryBlue.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryBlue.copy(alpha = 0.2f)),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            listOf(UserRole.STUDENT, UserRole.TEACHER).forEach { role ->
-                                val isSel = signUpRole == role
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isSel) PrimaryDarkBlue else Color.White)
-                                        .border(1.dp, if (isSel) PrimaryDarkBlue else GlassBorder, RoundedCornerShape(12.dp))
-                                        .clickable { signUpRole = role }
-                                        .padding(vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.School,
+                                    contentDescription = "Student Registration",
+                                    tint = PrimaryDarkBlue,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
                                     Text(
-                                        text = role.name,
+                                        text = "Student Registration Portal",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isSel) Color.White else PrimaryDarkBlue
+                                        color = PrimaryDarkBlue
+                                    )
+                                    Text(
+                                        text = "Teachers & Admins are registered directly by Super Admin",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF64748B)
                                     )
                                 }
                             }
@@ -171,7 +171,7 @@ fun AuthScreen(
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
-                            label = { Text("Full Name") },
+                            label = { Text("Student Full Name") },
                             leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Name") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp)
@@ -264,7 +264,7 @@ fun AuthScreen(
                                         isLoading = false
                                         return@Button
                                     }
-                                    onSignUp(name, email, password, signUpRole) { success, msg ->
+                                    onSignUp(name, email, password, UserRole.STUDENT) { success, msg ->
                                         isLoading = false
                                         if (success) successMessage = msg else errorMessage = msg
                                     }

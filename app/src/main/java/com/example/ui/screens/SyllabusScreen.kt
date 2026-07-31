@@ -152,19 +152,31 @@ fun SyllabusScreen(
                                 color = Color(0xFF334155)
                             )
 
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Button(
-                                onClick = {
-                                    snackbarMsg = "Downloaded ${syllabus.subject} Syllabus PDF!"
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                            ) {
-                                Icon(Icons.Default.Download, contentDescription = "PDF")
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Download Subject PDF", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            if (syllabus.downloadUrl.isNotBlank()) {
+                                val context = androidx.compose.ui.platform.LocalContext.current
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = {
+                                        val url = syllabus.downloadUrl.trim()
+                                        if (url.startsWith("http://") || url.startsWith("https://")) {
+                                            try {
+                                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                snackbarMsg = "Unable to open Drive link"
+                                            }
+                                        } else {
+                                            snackbarMsg = "Drive Link: $url"
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                                ) {
+                                    Icon(Icons.Default.Download, contentDescription = "PDF")
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Open Syllabus PDF (Google Drive)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }

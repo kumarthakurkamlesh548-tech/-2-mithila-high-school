@@ -69,6 +69,7 @@ fun AdminDashboardScreen(
         AdminTile("Manage Syllabus", "syllabus", Icons.Default.Book) { user ->
             user == null || user.role == UserRole.SUPER_ADMIN || user.permissions.manageSyllabus
         },
+        AdminTile("Student Doubts & QnA", "doubt_section", Icons.Default.QuestionAnswer),
         AdminTile("School Information", "about_school", Icons.Default.School),
         AdminTile("System Settings", "settings", Icons.Default.Settings)
     )

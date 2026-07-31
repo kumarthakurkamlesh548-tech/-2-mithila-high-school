@@ -71,7 +71,7 @@ fun NoticeBoardScreen(
                         )
                     }
 
-                    if (userRole == UserRole.ADMIN) {
+                    if (userRole == UserRole.ADMIN || userRole == UserRole.SUPER_ADMIN || userRole == UserRole.TEACHER) {
                         FloatingActionButton(
                             onClick = { showAddDialog = true },
                             containerColor = PrimaryBlue,
@@ -168,6 +168,28 @@ fun NoticeBoardScreen(
                                 color = Color(0xFF334155),
                                 lineHeight = 18.sp
                             )
+
+                            if (notice.driveUrl.isNotBlank()) {
+                                val context = androidx.compose.ui.platform.LocalContext.current
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        val url = notice.driveUrl.trim()
+                                        if (url.startsWith("http://") || url.startsWith("https://")) {
+                                            try {
+                                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                // ignore
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("Open Attached Google Drive Link", fontSize = 11.sp, color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                                }
+                            }
 
                             Spacer(modifier = Modifier.height(10.dp))
 

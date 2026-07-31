@@ -279,6 +279,7 @@ fun SuperAdminDashboardScreen(
                         AdminTile("Manage Events", "events", Icons.Default.Event),
                         AdminTile("Manage Downloads", "downloads", Icons.Default.Download),
                         AdminTile("Manage Syllabus", "syllabus", Icons.Default.Book),
+                        AdminTile("Student Doubts & QnA", "doubt_section", Icons.Default.QuestionAnswer),
                         AdminTile("School Information", "about_school", Icons.Default.School),
                         AdminTile("System Settings", "settings", Icons.Default.Settings)
                     )

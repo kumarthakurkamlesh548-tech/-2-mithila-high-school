@@ -12,7 +12,6 @@ class FirebaseRepository {
 
     private val auth get() = FirebaseConfig.auth
     private val firestore get() = FirebaseConfig.db
-    private val storage get() = FirebaseConfig.storage
 
     companion object {
         private const val TAG = "FirebaseRepository"
@@ -33,34 +32,6 @@ class FirebaseRepository {
     }
 
     // ==========================================
-    // FIREBASE STORAGE OPERATIONS
-    // ==========================================
-    /**
-     * Upload bytes (PDF, Image, Document) to Firebase Storage bucket (students-71ec1.firebasestorage.app)
-     */
-    suspend fun uploadFileToStorage(
-        folderName: String,
-        fileName: String,
-        bytes: ByteArray,
-        mimeType: String = "application/pdf"
-    ): Result<String> {
-        val st = storage ?: return Result.failure(IllegalStateException("Firebase Storage not available"))
-        return try {
-            val path = "$folderName/${System.currentTimeMillis()}_$fileName"
-            val ref = st.reference.child(path)
-            val metadata = com.google.firebase.storage.StorageMetadata.Builder()
-                .setContentType(mimeType)
-                .build()
-            ref.putBytes(bytes, metadata).await()
-            val downloadUrl = ref.downloadUrl.await().toString()
-            Log.d(TAG, "File uploaded successfully to Firebase Storage: $downloadUrl")
-            Result.success(downloadUrl)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error uploading file to Firebase Storage", e)
-            Result.failure(e)
-        }
-    }
-
     // ==========================================
     // USER & AUTHENTICATION FIRESTORE INTEGRATION
     // ==========================================
@@ -591,6 +562,98 @@ class FirebaseRepository {
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents?.mapNotNull { documentToResult(it.id, it.data) } ?: emptyList()
+                trySend(list)
+            }
+        awaitClose { registration.remove() }
+    }
+
+    // ==========================================
+    // DOUBTS FIRESTORE INTEGRATION
+    // ==========================================
+    private fun doubtToMap(doubt: DoubtEntity): Map<String, Any> {
+        return mapOf(
+            "studentId" to doubt.studentId,
+            "studentName" to doubt.studentName,
+            "className" to doubt.className,
+            "subject" to doubt.subject,
+            "question" to doubt.question,
+            "date" to doubt.date,
+            "status" to doubt.status,
+            "replyText" to doubt.replyText,
+            "repliedBy" to doubt.repliedBy,
+            "replyDate" to doubt.replyDate
+        )
+    }
+
+    private fun documentToDoubt(docId: String, data: Map<String, Any?>?): DoubtEntity? {
+        if (data == null) return null
+        return try {
+            DoubtEntity(
+                id = docId.hashCode(),
+                firebaseId = docId,
+                studentId = (data["studentId"] as? String) ?: "",
+                studentName = (data["studentName"] as? String) ?: "",
+                className = (data["className"] as? String) ?: "",
+                subject = (data["subject"] as? String) ?: "",
+                question = (data["question"] as? String) ?: "",
+                date = (data["date"] as? String) ?: "30 Jul 2026",
+                status = (data["status"] as? String) ?: "Pending",
+                replyText = (data["replyText"] as? String) ?: "",
+                repliedBy = (data["repliedBy"] as? String) ?: "",
+                replyDate = (data["replyDate"] as? String) ?: ""
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing Doubt snapshot", e)
+            null
+        }
+    }
+
+    suspend fun saveDoubtToFirestore(doubt: DoubtEntity): String {
+        val fs = firestore ?: return "dbt_${System.currentTimeMillis()}"
+        val docRef = if (doubt.firebaseId.isNotBlank()) {
+            fs.collection(DOUBTS_COLLECTION).document(doubt.firebaseId)
+        } else {
+            fs.collection(DOUBTS_COLLECTION).document()
+        }
+        docRef.set(doubtToMap(doubt)).await()
+        return docRef.id
+    }
+
+    suspend fun replyDoubtInFirestore(
+        firebaseId: String,
+        replyText: String,
+        repliedBy: String,
+        replyDate: String = "30 Jul 2026"
+    ) {
+        if (firebaseId.isBlank()) return
+        val fs = firestore ?: return
+        try {
+            val updates = mapOf(
+                "replyText" to replyText,
+                "repliedBy" to repliedBy,
+                "replyDate" to replyDate,
+                "status" to "Answered"
+            )
+            fs.collection(DOUBTS_COLLECTION).document(firebaseId).update(updates).await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed replying to doubt in Firestore: ${e.message}")
+        }
+    }
+
+    fun getDoubtsFlow(): Flow<List<DoubtEntity>> = callbackFlow {
+        val fs = firestore
+        if (fs == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        val registration = fs.collection(DOUBTS_COLLECTION)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { documentToDoubt(it.id, it.data) } ?: emptyList()
                 trySend(list)
             }
         awaitClose { registration.remove() }

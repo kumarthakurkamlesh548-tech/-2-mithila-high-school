@@ -29,9 +29,13 @@ import androidx.room.TypeConverters
         EventEntity::class,
         DownloadEntity::class,
         ChatRoom::class,
-        ChatMessage::class
+        ChatMessage::class,
+        ActivityLogEntity::class,
+        AnnouncementEntity::class,
+        NotificationItemEntity::class,
+        FavoriteItemEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

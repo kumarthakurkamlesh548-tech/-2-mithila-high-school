@@ -17,6 +17,10 @@ import com.example.ui.components.NavigationDrawerContent
 import com.example.ui.components.SchoolBottomNav
 import com.example.ui.screens.*
 import com.example.ui.theme.MithilaSchoolTheme
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import android.app.Activity
 import com.example.ui.viewmodel.MainViewModel
 import com.example.ui.viewmodel.ScreenRoute
 import kotlinx.coroutines.launch
@@ -52,9 +56,41 @@ class MainActivity : ComponentActivity() {
             val events by viewModel.events.collectAsState()
             val downloads by viewModel.downloads.collectAsState()
 
+            val activityLogs by viewModel.activityLogs.collectAsState()
+            val announcements by viewModel.announcements.collectAsState()
+            val notifications by viewModel.notifications.collectAsState()
+            val favorites by viewModel.favorites.collectAsState()
+
             MithilaSchoolTheme(darkTheme = isDarkMode) {
                 val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
                 val scope = rememberCoroutineScope()
+                val context = LocalContext.current
+                var backPressedTime by remember { mutableLongStateOf(0L) }
+
+                BackHandler {
+                    if (drawerState.isOpen) {
+                        scope.launch { drawerState.close() }
+                    } else {
+                        val homeRoute = when (currentUser?.role) {
+                            UserRole.SUPER_ADMIN -> ScreenRoute.SuperAdminDashboard
+                            UserRole.ADMIN -> ScreenRoute.AdminDashboard
+                            UserRole.TEACHER -> ScreenRoute.TeacherDashboard
+                            UserRole.STUDENT -> ScreenRoute.StudentDashboard
+                            null -> ScreenRoute.Home
+                        }
+
+                        if (currentRoute == homeRoute || currentRoute == ScreenRoute.Home) {
+                            if (System.currentTimeMillis() - backPressedTime < 2000) {
+                                (context as? Activity)?.finish()
+                            } else {
+                                backPressedTime = System.currentTimeMillis()
+                                Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            viewModel.navigateTo(homeRoute)
+                        }
+                    }
+                }
 
                 ModalNavigationDrawer(
                     drawerState = drawerState,
@@ -74,9 +110,31 @@ class MainActivity : ComponentActivity() {
                         containerColor = if (isDarkMode) Color(0xFF0F172A) else Color(0xFFF7FBFF),
                         topBar = {
                             if (currentRoute !in listOf(ScreenRoute.Splash, ScreenRoute.Auth)) {
+                                val isRootDashboard = currentRoute in listOf(
+                                    ScreenRoute.Home,
+                                    ScreenRoute.StudentDashboard,
+                                    ScreenRoute.TeacherDashboard,
+                                    ScreenRoute.AdminDashboard,
+                                    ScreenRoute.SuperAdminDashboard
+                                )
+
                                 AppHeader(
                                     title = currentRoute.title,
                                     currentUser = currentUser,
+                                    onBackClick = if (!isRootDashboard) {
+                                        {
+                                            val homeRoute = when (currentUser?.role) {
+                                                UserRole.SUPER_ADMIN -> ScreenRoute.SuperAdminDashboard
+                                                UserRole.ADMIN -> ScreenRoute.AdminDashboard
+                                                UserRole.TEACHER -> ScreenRoute.TeacherDashboard
+                                                UserRole.STUDENT -> ScreenRoute.StudentDashboard
+                                                null -> ScreenRoute.Home
+                                            }
+                                            viewModel.navigateTo(homeRoute)
+                                        }
+                                    } else null,
+                                    onSearchClick = { viewModel.navigateTo(ScreenRoute.GlobalSearch) },
+                                    onNotificationClick = { viewModel.navigateTo(ScreenRoute.NotificationCenter) },
                                     onMenuClick = { scope.launch { drawerState.open() } },
                                     onProfileClick = { viewModel.navigateTo(ScreenRoute.Profile) }
                                 )
@@ -125,6 +183,44 @@ class MainActivity : ComponentActivity() {
                                         currentUser = currentUser,
                                         notices = notices,
                                         onCardClick = { routeStr -> viewModel.navigateTo(ScreenRoute.fromString(routeStr)) }
+                                    )
+
+                                    ScreenRoute.NotificationCenter -> NotificationCenterScreen(
+                                        notifications = notifications,
+                                        onMarkRead = { viewModel.markNotificationRead(it) },
+                                        onClearAll = { },
+                                        onNavigate = { viewModel.navigateTo(ScreenRoute.fromString(it)) }
+                                    )
+
+                                    ScreenRoute.GlobalSearch -> GlobalSearchScreen(
+                                        users = allUsers,
+                                        homeworkList = homeworkList,
+                                        results = results,
+                                        studyMaterials = studyMaterials,
+                                        timetables = timetables,
+                                        events = events,
+                                        notices = notices,
+                                        syllabusList = syllabusList,
+                                        onNavigate = { viewModel.navigateTo(ScreenRoute.fromString(it)) }
+                                    )
+
+                                    ScreenRoute.ActivityLogs -> ActivityLogsScreen(
+                                        logs = activityLogs
+                                    )
+
+                                    ScreenRoute.AnalyticsDashboard -> AnalyticsDashboardScreen(
+                                        users = allUsers,
+                                        homeworkList = homeworkList,
+                                        results = results,
+                                        doubts = doubts,
+                                        notices = notices,
+                                        events = events
+                                    )
+
+                                    ScreenRoute.Favorites -> FavoritesScreen(
+                                        favorites = favorites,
+                                        onRemoveFavorite = { itemType, itemId -> viewModel.removeFavorite(itemType, itemId) },
+                                        onNavigate = { viewModel.navigateTo(ScreenRoute.fromString(it)) }
                                     )
 
                                     ScreenRoute.AboutSchool -> AboutSchoolScreen()

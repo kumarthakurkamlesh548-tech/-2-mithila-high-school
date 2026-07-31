@@ -88,4 +88,23 @@ class SchoolRepository(private val dao: SchoolDao) {
     suspend fun saveChatMessage(message: ChatMessage) = dao.insertChatMessage(message)
     suspend fun saveChatMessages(messages: List<ChatMessage>) = dao.insertChatMessages(messages)
     suspend fun deleteChatMessage(messageId: String) = dao.deleteChatMessage(messageId)
+
+    // Activity Logs
+    val allActivityLogs: Flow<List<ActivityLogEntity>> = dao.getAllActivityLogs()
+    suspend fun logActivity(log: ActivityLogEntity) = dao.insertActivityLog(log)
+
+    // Announcements
+    val allAnnouncements: Flow<List<AnnouncementEntity>> = dao.getAllAnnouncements()
+    suspend fun postAnnouncement(announcement: AnnouncementEntity) = dao.insertAnnouncement(announcement)
+
+    // Notifications
+    val allNotifications: Flow<List<NotificationItemEntity>> = dao.getAllNotifications()
+    suspend fun addNotification(notification: NotificationItemEntity) = dao.insertNotification(notification)
+    suspend fun markNotificationRead(id: Int) = dao.markNotificationRead(id)
+
+    // Favorites
+    val allFavorites: Flow<List<FavoriteItemEntity>> = dao.getAllFavorites()
+    suspend fun addFavorite(favorite: FavoriteItemEntity) = dao.insertFavorite(favorite)
+    suspend fun removeFavorite(itemType: String, itemId: String) = dao.removeFavorite(itemType, itemId)
 }
+

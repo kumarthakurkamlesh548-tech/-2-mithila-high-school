@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -36,6 +37,8 @@ fun AppHeader(
     title: String,
     currentUser: UserEntity?,
     onBackClick: (() -> Unit)? = null,
+    onSearchClick: (() -> Unit)? = null,
+    onNotificationClick: (() -> Unit)? = null,
     onProfileClick: () -> Unit,
     onMenuClick: () -> Unit
 ) {
@@ -54,7 +57,7 @@ fun AppHeader(
                 )
             )
             .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -69,46 +72,48 @@ fun AppHeader(
                     IconButton(
                         onClick = onBackClick,
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.2f))
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                 } else {
                     IconButton(
                         onClick = onMenuClick,
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.2f))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Menu,
                             contentDescription = "Menu",
-                            tint = Color.White
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
 
                 Column {
                     Text(
                         text = title,
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "+2 Govt Mithila High School, Balaur",
-                        fontSize = 11.sp,
+                        text = "+2 Govt Mithila High School",
+                        fontSize = 10.sp,
                         color = Color.White.copy(alpha = 0.85f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -117,34 +122,40 @@ fun AppHeader(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Role Badge
-                if (currentUser != null) {
-                    val roleLabel = when(currentUser.role) {
-                        UserRole.STUDENT -> "Student"
-                        UserRole.TEACHER -> "Teacher"
-                        UserRole.ADMIN -> "Admin"
-                        UserRole.SUPER_ADMIN -> "Super Admin"
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.25f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                if (onSearchClick != null) {
+                    IconButton(
+                        onClick = onSearchClick,
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        Text(
-                            text = roleLabel,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
                 }
+
+                if (onNotificationClick != null) {
+                    IconButton(
+                        onClick = onNotificationClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
 
                 // Profile Avatar Icon
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
                         .background(Color.White)
                         .clickable { onProfileClick() },
@@ -154,7 +165,7 @@ fun AppHeader(
                         painter = painterResource(id = R.drawable.img_school_logo),
                         contentDescription = "School Logo",
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(28.dp)
                             .clip(CircleShape)
                     )
                 }

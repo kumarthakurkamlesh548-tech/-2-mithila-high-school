@@ -205,3 +205,46 @@ data class DownloadEntity(
     val fileType: String = "PDF",
     val driveUrl: String = ""
 )
+
+@Entity(tableName = "activity_logs")
+data class ActivityLogEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val actorName: String,
+    val actorRole: String,
+    val actionType: String, // Login, Logout, Attendance, Homework, Result, Notice, User Management
+    val details: String,
+    val timestamp: Long = System.currentTimeMillis(),
+    val formattedTime: String = "Just now"
+)
+
+@Entity(tableName = "announcements")
+data class AnnouncementEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val message: String,
+    val isImportant: Boolean = true,
+    val createdBy: String = "Super Admin",
+    val date: String = "30 Jul 2026"
+)
+
+@Entity(tableName = "notifications")
+data class NotificationItemEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val title: String,
+    val message: String,
+    val type: String, // Homework, Notice, Results, Events, Chat, Doubt, Announcement
+    val timestamp: Long = System.currentTimeMillis(),
+    val formattedTime: String = "Just now",
+    val isRead: Boolean = false
+)
+
+@Entity(tableName = "favorites")
+data class FavoriteItemEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val itemType: String, // Homework, Notice, StudyMaterial, Download
+    val itemId: String,
+    val title: String,
+    val subtitle: String,
+    val url: String = "",
+    val dateAdded: String = "Today"
+)
+

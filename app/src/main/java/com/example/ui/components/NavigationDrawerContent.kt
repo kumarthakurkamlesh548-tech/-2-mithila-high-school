@@ -42,14 +42,19 @@ fun NavigationDrawerContent(
     onCloseDrawer: () -> Unit
 ) {
     val menuItems = mutableListOf(
-        DrawerMenuItem(ScreenRoute.Home, "Home", Icons.Default.Home)
+        DrawerMenuItem(ScreenRoute.Home, "Home", Icons.Default.Home),
+        DrawerMenuItem(ScreenRoute.GlobalSearch, "Global Search", Icons.Default.Search),
+        DrawerMenuItem(ScreenRoute.NotificationCenter, "Notifications", Icons.Default.Notifications),
+        DrawerMenuItem(ScreenRoute.Favorites, "Bookmarks", Icons.Default.Bookmark)
     )
 
     if (currentUser?.role == com.example.data.model.UserRole.SUPER_ADMIN) {
         menuItems.add(DrawerMenuItem(ScreenRoute.SuperAdminDashboard, "Super Admin HQ", Icons.Default.Security))
+        menuItems.add(DrawerMenuItem(ScreenRoute.ActivityLogs, "Activity Audit Logs", Icons.Default.History))
     }
     if (currentUser?.role == com.example.data.model.UserRole.ADMIN || currentUser?.role == com.example.data.model.UserRole.SUPER_ADMIN) {
         menuItems.add(DrawerMenuItem(ScreenRoute.AdminDashboard, "Admin Dashboard", Icons.Default.AdminPanelSettings))
+        menuItems.add(DrawerMenuItem(ScreenRoute.AnalyticsDashboard, "Analytics Dashboard", Icons.Default.Analytics))
     }
 
     menuItems.addAll(

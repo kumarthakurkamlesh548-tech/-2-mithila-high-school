@@ -33,6 +33,11 @@ sealed class ScreenRoute(val route: String, val title: String) {
     object StudentDashboard : ScreenRoute("student_dashboard", "Student Overview")
     object Chat : ScreenRoute("chat", "School Chat & Channels")
     object GeminiChatbot : ScreenRoute("gemini_chatbot", "AI Support Agent")
+    object NotificationCenter : ScreenRoute("notifications", "Notification Center")
+    object GlobalSearch : ScreenRoute("search", "Global Search")
+    object ActivityLogs : ScreenRoute("activity_logs", "Activity Logs")
+    object AnalyticsDashboard : ScreenRoute("analytics", "Analytics & Insights")
+    object Favorites : ScreenRoute("favorites", "Bookmarks & Favorites")
 
     companion object {
         fun fromString(routeStr: String): ScreenRoute {
@@ -58,6 +63,11 @@ sealed class ScreenRoute(val route: String, val title: String) {
                 "student_dashboard" -> StudentDashboard
                 "chat" -> Chat
                 "gemini_chatbot" -> GeminiChatbot
+                "notifications" -> NotificationCenter
+                "search" -> GlobalSearch
+                "activity_logs" -> ActivityLogs
+                "analytics" -> AnalyticsDashboard
+                "favorites" -> Favorites
                 else -> Home
             }
         }
@@ -181,6 +191,63 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val galleryItems = repository.galleryItems.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val events = repository.allEvents.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val downloads = repository.allDownloads.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val activityLogs = repository.allActivityLogs.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val announcements = repository.allAnnouncements.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val notifications = repository.allNotifications.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val favorites = repository.allFavorites.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun logActivity(actionType: String, details: String) {
+        viewModelScope.launch {
+            val user = _currentUser.value
+            val log = ActivityLogEntity(
+                actorName = user?.name ?: "Guest",
+                actorRole = user?.role?.name ?: "GUEST",
+                actionType = actionType,
+                details = details
+            )
+            repository.logActivity(log)
+        }
+    }
+
+    fun postAnnouncement(message: String, isImportant: Boolean = true) {
+        viewModelScope.launch {
+            val user = _currentUser.value
+            val ann = AnnouncementEntity(
+                message = message,
+                isImportant = isImportant,
+                createdBy = user?.name ?: "Super Admin"
+            )
+            repository.postAnnouncement(ann)
+            logActivity("Notice", "Posted announcement: $message")
+        }
+    }
+
+    fun markNotificationRead(id: Int) {
+        viewModelScope.launch {
+            repository.markNotificationRead(id)
+        }
+    }
+
+    fun addFavorite(itemType: String, itemId: String, title: String, subtitle: String, url: String = "") {
+        viewModelScope.launch {
+            repository.addFavorite(
+                FavoriteItemEntity(
+                    itemType = itemType,
+                    itemId = itemId,
+                    title = title,
+                    subtitle = subtitle,
+                    url = url
+                )
+            )
+        }
+    }
+
+    fun removeFavorite(itemType: String, itemId: String) {
+        viewModelScope.launch {
+            repository.removeFavorite(itemType, itemId)
+        }
+    }
+
 
     // Selected Class Filter State
     val selectedClass = MutableStateFlow("Class 10")

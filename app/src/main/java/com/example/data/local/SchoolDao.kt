@@ -184,4 +184,39 @@ interface SchoolDao {
 
     @Query("UPDATE chat_messages SET isDeleted = 1 WHERE id = :messageId")
     suspend fun deleteChatMessage(messageId: String)
+
+    // Activity Logs
+    @Query("SELECT * FROM activity_logs ORDER BY timestamp DESC")
+    fun getAllActivityLogs(): Flow<List<ActivityLogEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertActivityLog(log: ActivityLogEntity)
+
+    // Announcements
+    @Query("SELECT * FROM announcements ORDER BY id DESC")
+    fun getAllAnnouncements(): Flow<List<AnnouncementEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAnnouncement(announcement: AnnouncementEntity)
+
+    // Notifications
+    @Query("SELECT * FROM notifications ORDER BY timestamp DESC")
+    fun getAllNotifications(): Flow<List<NotificationItemEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertNotification(notification: NotificationItemEntity)
+
+    @Query("UPDATE notifications SET isRead = 1 WHERE id = :id")
+    suspend fun markNotificationRead(id: Int)
+
+    // Favorites
+    @Query("SELECT * FROM favorites ORDER BY id DESC")
+    fun getAllFavorites(): Flow<List<FavoriteItemEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFavorite(favorite: FavoriteItemEntity)
+
+    @Query("DELETE FROM favorites WHERE itemType = :itemType AND itemId = :itemId")
+    suspend fun removeFavorite(itemType: String, itemId: String)
 }
+

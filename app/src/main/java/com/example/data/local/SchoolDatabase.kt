@@ -27,9 +27,11 @@ import androidx.room.TypeConverters
         DoubtReplyEntity::class,
         GalleryEntity::class,
         EventEntity::class,
-        DownloadEntity::class
+        DownloadEntity::class,
+        ChatRoom::class,
+        ChatMessage::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

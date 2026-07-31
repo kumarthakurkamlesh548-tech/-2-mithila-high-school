@@ -57,7 +57,9 @@ fun HomeScreen(
         QuickAccessCardItem("Class Routine", "Timetable & Exams", Icons.Default.Schedule, "timetable", Color(0xFFEC4899)),
         QuickAccessCardItem("Daily Homework", "Assignments", Icons.Default.Assignment, "homework", Color(0xFF06B6D4)),
         QuickAccessCardItem("Syllabus", "Classes 9 to 12", Icons.Default.Menu, "syllabus", Color(0xFF6366F1)),
-        QuickAccessCardItem("Doubt Section", "Ask & QnA", Icons.Default.QuestionAnswer, "doubt_section", Color(0xFF14B8A6))
+        QuickAccessCardItem("Doubt Section", "Ask & QnA", Icons.Default.QuestionAnswer, "doubt_section", Color(0xFF14B8A6)),
+        QuickAccessCardItem("School Chat", "Live Channels", Icons.Default.Forum, "chat", Color(0xFF0284C7)),
+        QuickAccessCardItem("AI Support Agent", "Gemini Assistant", Icons.Default.AutoAwesome, "gemini_chatbot", Color(0xFF7C3AED))
     )
 
     LazyColumn(

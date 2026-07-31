@@ -640,6 +640,16 @@ class FirebaseRepository {
         }
     }
 
+    suspend fun updateDoubtStatusInFirestore(firebaseId: String, newStatus: String) {
+        if (firebaseId.isBlank()) return
+        val fs = firestore ?: return
+        try {
+            fs.collection(DOUBTS_COLLECTION).document(firebaseId).update("status", newStatus).await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed updating doubt status in Firestore: ${e.message}")
+        }
+    }
+
     fun getDoubtsFlow(): Flow<List<DoubtEntity>> = callbackFlow {
         val fs = firestore
         if (fs == null) {
@@ -654,6 +664,206 @@ class FirebaseRepository {
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents?.mapNotNull { documentToDoubt(it.id, it.data) } ?: emptyList()
+                trySend(list)
+            }
+        awaitClose { registration.remove() }
+    }
+
+    // ==========================================
+    // CHAT FIRESTORE INTEGRATION
+    // ==========================================
+    private val CHAT_MESSAGES_COLLECTION = "chat_messages"
+    private val CHAT_ROOMS_COLLECTION = "chat_rooms"
+    private val USER_PRESENCE_COLLECTION = "user_presence"
+
+    suspend fun sendChatMessageToFirestore(msg: ChatMessage) {
+        val fs = firestore ?: return
+        try {
+            val map = mapOf(
+                "id" to msg.id,
+                "roomId" to msg.roomId,
+                "senderId" to msg.senderId,
+                "senderName" to msg.senderName,
+                "senderRole" to msg.senderRole,
+                "messageText" to msg.messageText,
+                "timestamp" to msg.timestamp,
+                "formattedTime" to msg.formattedTime,
+                "replyToId" to msg.replyToId,
+                "replyToText" to msg.replyToText,
+                "replyToSender" to msg.replyToSender,
+                "readBy" to msg.readBy,
+                "isDeleted" to msg.isDeleted
+            )
+            fs.collection(CHAT_MESSAGES_COLLECTION).document(msg.id).set(map).await()
+
+            fs.collection(CHAT_ROOMS_COLLECTION).document(msg.roomId).update(
+                mapOf(
+                    "lastMessage" to msg.messageText,
+                    "lastMessageTimestamp" to msg.timestamp
+                )
+            ).await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending chat message to Firestore", e)
+        }
+    }
+
+    fun getChatMessagesFlow(roomId: String): Flow<List<ChatMessage>> = callbackFlow {
+        val fs = firestore
+        if (fs == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        val registration = fs.collection(CHAT_MESSAGES_COLLECTION)
+            .whereEqualTo("roomId", roomId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { doc ->
+                    val data = doc.data ?: return@mapNotNull null
+                    ChatMessage(
+                        id = doc.id,
+                        roomId = (data["roomId"] as? String) ?: "",
+                        senderId = (data["senderId"] as? String) ?: "",
+                        senderName = (data["senderName"] as? String) ?: "",
+                        senderRole = (data["senderRole"] as? String) ?: "",
+                        messageText = (data["messageText"] as? String) ?: "",
+                        timestamp = (data["timestamp"] as? Long) ?: System.currentTimeMillis(),
+                        formattedTime = (data["formattedTime"] as? String) ?: "",
+                        replyToId = (data["replyToId"] as? String) ?: "",
+                        replyToText = (data["replyToText"] as? String) ?: "",
+                        replyToSender = (data["replyToSender"] as? String) ?: "",
+                        readBy = (data["readBy"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                        isDeleted = (data["isDeleted"] as? Boolean) ?: false
+                    )
+                }?.sortedBy { it.timestamp } ?: emptyList()
+                trySend(list)
+            }
+        awaitClose { registration.remove() }
+    }
+
+    suspend fun deleteChatMessageFromFirestore(messageId: String) {
+        val fs = firestore ?: return
+        try {
+            fs.collection(CHAT_MESSAGES_COLLECTION).document(messageId).update("isDeleted", true).await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting chat message", e)
+        }
+    }
+
+    suspend fun markMessageReadInFirestore(messageId: String, userId: String) {
+        val fs = firestore ?: return
+        try {
+            fs.collection(CHAT_MESSAGES_COLLECTION).document(messageId)
+                .update("readBy", com.google.firebase.firestore.FieldValue.arrayUnion(userId)).await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error marking message read", e)
+        }
+    }
+
+    suspend fun createOrUpdateChatRoom(room: ChatRoom) {
+        val fs = firestore ?: return
+        try {
+            val map = mapOf(
+                "id" to room.id,
+                "title" to room.title,
+                "isGroup" to room.isGroup,
+                "participantIds" to room.participantIds,
+                "participantNames" to room.participantNames,
+                "lastMessage" to room.lastMessage,
+                "lastMessageTimestamp" to room.lastMessageTimestamp,
+                "iconName" to room.iconName
+            )
+            fs.collection(CHAT_ROOMS_COLLECTION).document(room.id).set(map, com.google.firebase.firestore.SetOptions.merge()).await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving chat room", e)
+        }
+    }
+
+    fun getChatRoomsFlow(): Flow<List<ChatRoom>> = callbackFlow {
+        val fs = firestore
+        if (fs == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        val registration = fs.collection(CHAT_ROOMS_COLLECTION)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { doc ->
+                    val data = doc.data ?: return@mapNotNull null
+                    ChatRoom(
+                        id = doc.id,
+                        title = (data["title"] as? String) ?: "Chat Room",
+                        isGroup = (data["isGroup"] as? Boolean) ?: true,
+                        participantIds = (data["participantIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                        participantNames = (data["participantNames"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                        lastMessage = (data["lastMessage"] as? String) ?: "",
+                        lastMessageTimestamp = (data["lastMessageTimestamp"] as? Long) ?: System.currentTimeMillis(),
+                        iconName = (data["iconName"] as? String) ?: "group"
+                    )
+                }?.sortedByDescending { it.lastMessageTimestamp } ?: emptyList()
+                trySend(list)
+            }
+        awaitClose { registration.remove() }
+    }
+
+    suspend fun updateUserPresence(
+        userId: String,
+        userName: String,
+        userRole: String,
+        isOnline: Boolean,
+        isTyping: Boolean,
+        typingInRoomId: String
+    ) {
+        if (userId.isBlank()) return
+        val fs = firestore ?: return
+        try {
+            val map = mapOf(
+                "userId" to userId,
+                "userName" to userName,
+                "userRole" to userRole,
+                "isOnline" to isOnline,
+                "lastSeen" to System.currentTimeMillis(),
+                "isTyping" to isTyping,
+                "typingInRoomId" to typingInRoomId
+            )
+            fs.collection(USER_PRESENCE_COLLECTION).document(userId).set(map, com.google.firebase.firestore.SetOptions.merge()).await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating presence", e)
+        }
+    }
+
+    fun getUserPresenceFlow(): Flow<List<UserPresence>> = callbackFlow {
+        val fs = firestore
+        if (fs == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        val registration = fs.collection(USER_PRESENCE_COLLECTION)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { doc ->
+                    val data = doc.data ?: return@mapNotNull null
+                    UserPresence(
+                        userId = doc.id,
+                        userName = (data["userName"] as? String) ?: "",
+                        userRole = (data["userRole"] as? String) ?: "",
+                        isOnline = (data["isOnline"] as? Boolean) ?: false,
+                        lastSeen = (data["lastSeen"] as? Long) ?: System.currentTimeMillis(),
+                        isTyping = (data["isTyping"] as? Boolean) ?: false,
+                        typingInRoomId = (data["typingInRoomId"] as? String) ?: ""
+                    )
+                } ?: emptyList()
                 trySend(list)
             }
         awaitClose { registration.remove() }

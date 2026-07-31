@@ -161,4 +161,27 @@ interface SchoolDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDownload(download: DownloadEntity)
+
+    // Chat Rooms
+    @Query("SELECT * FROM chat_rooms ORDER BY lastMessageTimestamp DESC")
+    fun getAllChatRooms(): Flow<List<ChatRoom>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChatRoom(room: ChatRoom)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChatRooms(rooms: List<ChatRoom>)
+
+    // Chat Messages
+    @Query("SELECT * FROM chat_messages WHERE roomId = :roomId ORDER BY timestamp ASC")
+    fun getMessagesForRoom(roomId: String): Flow<List<ChatMessage>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChatMessage(message: ChatMessage)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChatMessages(messages: List<ChatMessage>)
+
+    @Query("UPDATE chat_messages SET isDeleted = 1 WHERE id = :messageId")
+    suspend fun deleteChatMessage(messageId: String)
 }

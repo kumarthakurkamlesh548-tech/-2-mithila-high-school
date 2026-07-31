@@ -31,6 +31,8 @@ sealed class ScreenRoute(val route: String, val title: String) {
     object SuperAdminDashboard : ScreenRoute("super_admin_dashboard", "Super Admin HQ")
     object TeacherDashboard : ScreenRoute("teacher_dashboard", "Teacher Portal")
     object StudentDashboard : ScreenRoute("student_dashboard", "Student Overview")
+    object Chat : ScreenRoute("chat", "School Chat & Channels")
+    object GeminiChatbot : ScreenRoute("gemini_chatbot", "AI Support Agent")
 
     companion object {
         fun fromString(routeStr: String): ScreenRoute {
@@ -54,6 +56,8 @@ sealed class ScreenRoute(val route: String, val title: String) {
                 "super_admin_dashboard" -> SuperAdminDashboard
                 "teacher_dashboard" -> TeacherDashboard
                 "student_dashboard" -> StudentDashboard
+                "chat" -> Chat
+                "gemini_chatbot" -> GeminiChatbot
                 else -> Home
             }
         }
@@ -93,11 +97,62 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+
+        // Initialize default Chat Rooms
+        viewModelScope.launch {
+            val defaultRooms = listOf(
+                ChatRoom(id = "group_general", title = "General Discussions", isGroup = true),
+                ChatRoom(id = "group_class_10", title = "Class 10 Group", isGroup = true),
+                ChatRoom(id = "group_class_12", title = "Class 12 Group", isGroup = true),
+                ChatRoom(id = "group_teachers", title = "Faculty & Teachers Lounge", isGroup = true)
+            )
+            repository.saveChatRooms(defaultRooms)
+            defaultRooms.forEach { firebaseRepository.createOrUpdateChatRoom(it) }
+        }
+
+        // Collect Chat Rooms real-time
+        viewModelScope.launch {
+            firebaseRepository.getChatRoomsFlow().collect { remoteRooms ->
+                if (remoteRooms.isNotEmpty()) {
+                    repository.saveChatRooms(remoteRooms)
+                    _chatRooms.value = remoteRooms
+                }
+            }
+        }
+
+        // Collect Room Messages real-time when activeRoomId changes
+        viewModelScope.launch {
+            activeRoomId.collectLatest { roomId ->
+                firebaseRepository.getChatMessagesFlow(roomId).collect { msgs ->
+                    repository.saveChatMessages(msgs)
+                    _currentRoomMessages.value = msgs
+                }
+            }
+        }
+
+        // Collect Presences real-time
+        viewModelScope.launch {
+            firebaseRepository.getUserPresenceFlow().collect { presences ->
+                _userPresences.value = presences
+            }
+        }
     }
 
     // Current User State
     private val _currentUser = MutableStateFlow<UserEntity?>(null)
     val currentUser: StateFlow<UserEntity?> = _currentUser.asStateFlow()
+
+    // Chat State
+    val activeRoomId = MutableStateFlow("group_general")
+
+    private val _chatRooms = MutableStateFlow<List<ChatRoom>>(emptyList())
+    val chatRooms: StateFlow<List<ChatRoom>> = _chatRooms.asStateFlow()
+
+    private val _currentRoomMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val currentRoomMessages: StateFlow<List<ChatMessage>> = _currentRoomMessages.asStateFlow()
+
+    private val _userPresences = MutableStateFlow<List<UserPresence>>(emptyList())
+    val userPresences: StateFlow<List<UserPresence>> = _userPresences.asStateFlow()
 
     // Users list for Super Admin & Admin Management
     val allUsers: StateFlow<List<UserEntity>> = repository.allUsers.stateIn(
@@ -497,6 +552,98 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
             repository.saveAttendanceRecords(records)
+        }
+    }
+
+    // ==========================================
+    // CHAT ENGINE FUNCTIONS
+    // ==========================================
+    fun selectChatRoom(roomId: String) {
+        activeRoomId.value = roomId
+    }
+
+    fun sendChatMessage(
+        roomId: String,
+        text: String,
+        replyToId: String = "",
+        replyToText: String = "",
+        replyToSender: String = ""
+    ) {
+        val user = _currentUser.value ?: return
+        val timeFormat = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+        val msg = ChatMessage(
+            id = "msg_${System.currentTimeMillis()}_${(1000..9999).random()}",
+            roomId = roomId,
+            senderId = user.id,
+            senderName = user.name,
+            senderRole = user.role.name,
+            messageText = text,
+            timestamp = System.currentTimeMillis(),
+            formattedTime = timeFormat.format(java.util.Date()),
+            replyToId = replyToId,
+            replyToText = replyToText,
+            replyToSender = replyToSender,
+            readBy = listOf(user.id)
+        )
+        viewModelScope.launch {
+            repository.saveChatMessage(msg)
+            firebaseRepository.sendChatMessageToFirestore(msg)
+        }
+    }
+
+    fun deleteChatMessage(roomId: String, messageId: String) {
+        viewModelScope.launch {
+            repository.deleteChatMessage(messageId)
+            firebaseRepository.deleteChatMessageFromFirestore(messageId)
+        }
+    }
+
+    fun markMessageRead(roomId: String, messageId: String) {
+        val user = _currentUser.value ?: return
+        viewModelScope.launch {
+            firebaseRepository.markMessageReadInFirestore(messageId, user.id)
+        }
+    }
+
+    fun updateTypingStatus(roomId: String, isTyping: Boolean) {
+        val user = _currentUser.value ?: return
+        viewModelScope.launch {
+            firebaseRepository.updateUserPresence(
+                userId = user.id,
+                userName = user.name,
+                userRole = user.role.name,
+                isOnline = true,
+                isTyping = isTyping,
+                typingInRoomId = roomId
+            )
+        }
+    }
+
+    fun createOrSelectPrivateRoom(targetUser: UserEntity) {
+        val user = _currentUser.value ?: return
+        val pairIds = listOf(user.id, targetUser.id).sorted()
+        val roomId = "private_${pairIds[0]}_${pairIds[1]}"
+        val room = ChatRoom(
+            id = roomId,
+            title = targetUser.name,
+            isGroup = false,
+            participantIds = listOf(user.id, targetUser.id),
+            participantNames = listOf(user.name, targetUser.name)
+        )
+        viewModelScope.launch {
+            repository.saveChatRoom(room)
+            firebaseRepository.createOrUpdateChatRoom(room)
+            activeRoomId.value = roomId
+        }
+    }
+
+    fun updateDoubtStatus(doubtId: Int, newStatus: String) {
+        viewModelScope.launch {
+            val targetDoubt = doubts.value.find { it.id == doubtId }
+            repository.updateDoubtStatus(doubtId, newStatus)
+            if (targetDoubt != null && targetDoubt.firebaseId.isNotBlank()) {
+                firebaseRepository.updateDoubtStatusInFirestore(targetDoubt.firebaseId, newStatus)
+            }
         }
     }
 }

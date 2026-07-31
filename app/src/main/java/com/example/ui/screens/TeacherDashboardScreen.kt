@@ -120,6 +120,26 @@ fun TeacherDashboardScreen(
                         onClick = { showResultDialog = true }
                     )
                     TeacherActionCard(
+                        title = "School Chat",
+                        subtitle = "Faculty & Student Rooms",
+                        icon = Icons.Default.Forum,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigate("chat") }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    TeacherActionCard(
+                        title = "AI Support Agent",
+                        subtitle = "Gemini AI Tutor",
+                        icon = Icons.Default.AutoAwesome,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigate("gemini_chatbot") }
+                    )
+                    TeacherActionCard(
                         title = "Class Timetable",
                         subtitle = "View Schedule",
                         icon = Icons.Default.Schedule,

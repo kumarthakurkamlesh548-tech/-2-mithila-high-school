@@ -44,6 +44,10 @@ class MainActivity : ComponentActivity() {
             val homeworkList by viewModel.homeworkList.collectAsState()
             val timetables by viewModel.timetables.collectAsState()
             val doubts by viewModel.doubts.collectAsState()
+            val chatRooms by viewModel.chatRooms.collectAsState()
+            val currentRoomMessages by viewModel.currentRoomMessages.collectAsState()
+            val userPresences by viewModel.userPresences.collectAsState()
+            val activeRoomId by viewModel.activeRoomId.collectAsState()
             val galleryItems by viewModel.galleryItems.collectAsState()
             val events by viewModel.events.collectAsState()
             val downloads by viewModel.downloads.collectAsState()
@@ -165,14 +169,46 @@ class MainActivity : ComponentActivity() {
                                         timetables = timetables
                                     )
 
+                                    ScreenRoute.Chat -> ChatScreen(
+                                        currentUser = currentUser,
+                                        chatRooms = chatRooms,
+                                        currentRoomMessages = currentRoomMessages,
+                                        presences = userPresences,
+                                        allUsers = allUsers,
+                                        activeRoomId = activeRoomId,
+                                        onSelectRoom = { viewModel.selectChatRoom(it) },
+                                        onSendMessage = { roomId, text, replyToId, replyToText, replyToSender ->
+                                            viewModel.sendChatMessage(roomId, text, replyToId, replyToText, replyToSender)
+                                        },
+                                        onDeleteMessage = { roomId, messageId ->
+                                            viewModel.deleteChatMessage(roomId, messageId)
+                                        },
+                                        onUpdateTypingStatus = { roomId, isTyping ->
+                                            viewModel.updateTypingStatus(roomId, isTyping)
+                                        },
+                                        onMarkRead = { roomId, messageId ->
+                                            viewModel.markMessageRead(roomId, messageId)
+                                        },
+                                        onCreatePrivateRoom = { targetUser ->
+                                            viewModel.createOrSelectPrivateRoom(targetUser)
+                                        }
+                                    )
+
+                                    ScreenRoute.GeminiChatbot -> GeminiChatbotScreen()
+
                                     ScreenRoute.DoubtSection -> DoubtSection(
                                         doubts = doubts,
                                         userRole = currentUser?.role,
+                                        currentUserId = currentUser?.id ?: "",
+                                        currentUserName = currentUser?.name ?: "",
                                         onAskDoubt = { subject, question ->
                                             viewModel.addDoubt(subject, question)
                                         },
                                         onReplyDoubt = { doubtId, reply ->
                                             viewModel.replyDoubt(doubtId, reply)
+                                        },
+                                        onUpdateStatus = { doubtId, status ->
+                                            viewModel.updateDoubtStatus(doubtId, status)
                                         }
                                     )
 

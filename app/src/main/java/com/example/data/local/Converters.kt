@@ -41,4 +41,14 @@ class Converters {
             UserRole.STUDENT
         }
     }
+
+    @TypeConverter
+    fun fromStringList(list: List<String>?): String {
+        return list?.joinToString(";;") ?: ""
+    }
+
+    @TypeConverter
+    fun toStringList(data: String?): List<String> {
+        return if (data.isNullOrEmpty()) emptyList() else data.split(";;")
+    }
 }

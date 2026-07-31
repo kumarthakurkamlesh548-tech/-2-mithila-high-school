@@ -79,4 +79,13 @@ class SchoolRepository(private val dao: SchoolDao) {
     // Downloads
     val allDownloads = dao.getAllDownloads()
     suspend fun addDownload(download: DownloadEntity) = dao.insertDownload(download)
+
+    // Chat
+    val allChatRooms: Flow<List<ChatRoom>> = dao.getAllChatRooms()
+    suspend fun saveChatRoom(room: ChatRoom) = dao.insertChatRoom(room)
+    suspend fun saveChatRooms(rooms: List<ChatRoom>) = dao.insertChatRooms(rooms)
+    fun getMessagesForRoom(roomId: String): Flow<List<ChatMessage>> = dao.getMessagesForRoom(roomId)
+    suspend fun saveChatMessage(message: ChatMessage) = dao.insertChatMessage(message)
+    suspend fun saveChatMessages(messages: List<ChatMessage>) = dao.insertChatMessages(messages)
+    suspend fun deleteChatMessage(messageId: String) = dao.deleteChatMessage(messageId)
 }

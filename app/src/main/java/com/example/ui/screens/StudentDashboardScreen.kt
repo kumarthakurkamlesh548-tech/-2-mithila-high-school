@@ -131,6 +131,26 @@ fun StudentDashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     TeacherActionCard(
+                        title = "School Chat",
+                        subtitle = "Real-time Messaging",
+                        icon = Icons.Default.Forum,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigate("chat") }
+                    )
+                    TeacherActionCard(
+                        title = "AI Support Agent",
+                        subtitle = "Gemini Multi-turn Assistant",
+                        icon = Icons.Default.AutoAwesome,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigate("gemini_chatbot") }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    TeacherActionCard(
                         title = "Class Timetable",
                         subtitle = "Daily & Exam Routine",
                         icon = Icons.Default.Schedule,
@@ -139,7 +159,7 @@ fun StudentDashboardScreen(
                     )
                     TeacherActionCard(
                         title = "Ask Doubts",
-                        subtitle = "QnA Forum with Teachers",
+                        subtitle = "Academic QnA Portal",
                         icon = Icons.Default.QuestionAnswer,
                         modifier = Modifier.weight(1f),
                         onClick = { onNavigate("doubt_section") }

@@ -15,15 +15,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.example.data.model.DownloadEntity
 import com.example.ui.components.GlassmorphicCard
 import com.example.ui.theme.PrimaryBlue
 import com.example.ui.theme.PrimaryDarkBlue
+import com.example.utils.DownloadUtils
 
 @Composable
 fun DownloadsScreen(
     downloads: List<DownloadEntity>
 ) {
+    val context = LocalContext.current
     var snackbarMsg by remember { mutableStateOf("") }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -70,7 +73,14 @@ fun DownloadsScreen(
                         }
 
                         Button(
-                            onClick = { snackbarMsg = "Downloaded ${item.title}!" },
+                            onClick = {
+                                DownloadUtils.saveToDownloads(
+                                    context = context,
+                                    filename = "${item.title.replace(" ", "_")}.pdf",
+                                    content = "OFFICIAL DOCUMENT: ${item.title}\nCategory: ${item.category}\nSchool: +2 Govt Mithila High School Balaur, Darbhanga\nDate: 2026\nStatus: Official Verified Form"
+                                )
+                                snackbarMsg = "Saved ${item.title} to Downloads folder!"
+                            },
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
                         ) {

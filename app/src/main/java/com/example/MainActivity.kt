@@ -197,7 +197,10 @@ class MainActivity : ComponentActivity() {
                                     )
 
                                     ScreenRoute.Profile -> ProfileScreen(
-                                        currentUser = currentUser
+                                        currentUser = currentUser,
+                                        onUpdateProfile = { phone, address, parentName, photoUrl, callback ->
+                                            viewModel.updateUserProfile(phone, address, parentName, photoUrl, callback)
+                                        }
                                     )
 
                                     ScreenRoute.Settings -> SettingsScreen(

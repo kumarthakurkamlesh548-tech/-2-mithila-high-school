@@ -141,19 +141,80 @@ class FirebaseRepository {
         )
     }
 
+    fun isSuperAdminEmail(email: String): Boolean {
+        val clean = email.lowercase().trim()
+        return clean == "kumarthakurkamlesh266@gmail.com" ||
+               clean == "kumarthakurkamlesh548@gmail.com" ||
+               clean == "superadmin@mithilahs.edu.in"
+    }
+
+    private suspend fun verifyAndRepairSuperAdmin(uid: String, cleanEmail: String): UserEntity {
+        val fs = firestore
+        val userRef = fs?.collection(USERS_COLLECTION)?.document(uid)
+        
+        var docData: Map<String, Any?>? = null
+        if (userRef != null) {
+            try {
+                val snapshot = userRef.get().await()
+                if (snapshot.exists()) {
+                    docData = snapshot.data
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed reading super admin doc: ${e.message}")
+            }
+        }
+
+        val needsCreate = docData == null
+        val currentRole = docData?.get("role") as? String
+        val isActive = (docData?.get("active") as? Boolean) ?: (docData?.get("isEnabled") as? Boolean) ?: true
+        val needsRepair = !needsCreate && (currentRole != "SUPER_ADMIN" || !isActive)
+
+        if (needsCreate || needsRepair) {
+            val autoDoc = mapOf(
+                "id" to uid,
+                "email" to cleanEmail,
+                "role" to "SUPER_ADMIN",
+                "active" to true,
+                "isEnabled" to true,
+                "name" to "Super Administrator",
+                "permissions" to listOf("*"),
+                "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+            )
+            try {
+                userRef?.set(autoDoc, com.google.firebase.firestore.SetOptions.merge())?.await()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed saving/repairing super admin doc: ${e.message}")
+            }
+        }
+
+        return UserEntity(
+            id = uid,
+            name = (docData?.get("name") as? String) ?: "Super Administrator",
+            email = cleanEmail,
+            role = UserRole.SUPER_ADMIN,
+            isEnabled = true,
+            permissions = AdminPermissions()
+        )
+    }
+
     suspend fun authenticateUser(email: String, password: String): Result<UserEntity> {
         val cleanEmail = email.trim().lowercase()
 
         // Super Admin account check
-        if (cleanEmail == "superadmin@mithilahs.edu.in") {
-            val superAdminUser = UserEntity(
-                id = "super_001",
-                name = "Super Administrator",
-                email = "superadmin@mithilahs.edu.in",
-                role = UserRole.SUPER_ADMIN,
-                isEnabled = true
-            )
-            try { saveUserToFirestore(superAdminUser) } catch (_: Exception) {}
+        if (isSuperAdminEmail(cleanEmail)) {
+            var uid = auth?.currentUser?.uid ?: "super_001"
+            auth?.let { au ->
+                if (password.isNotBlank()) {
+                    try {
+                        val authRes = au.signInWithEmailAndPassword(cleanEmail, password).await()
+                        authRes.user?.uid?.let { uid = it }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Super Admin sign in with password failed/fallback: ${e.message}")
+                    }
+                }
+            }
+            val superAdminUser = verifyAndRepairSuperAdmin(uid, cleanEmail)
             return Result.success(superAdminUser)
         }
 

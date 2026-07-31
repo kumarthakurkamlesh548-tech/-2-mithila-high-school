@@ -68,24 +68,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         val dao = SchoolDatabase.getDatabase(application).schoolDao()
         repository = SchoolRepository(dao)
+
+        val fbUser = com.example.data.firebase.FirebaseConfig.auth?.currentUser
+        if (fbUser != null && !fbUser.email.isNullOrBlank()) {
+            viewModelScope.launch {
+                val res = firebaseRepository.authenticateUser(fbUser.email!!, "")
+                if (res.isSuccess) {
+                    val user = res.getOrNull()!!
+                    _currentUser.value = user
+                    when (user.role) {
+                        UserRole.SUPER_ADMIN -> _currentRoute.value = ScreenRoute.SuperAdminDashboard
+                        UserRole.ADMIN -> _currentRoute.value = ScreenRoute.AdminDashboard
+                        UserRole.TEACHER -> _currentRoute.value = ScreenRoute.TeacherDashboard
+                        UserRole.STUDENT -> _currentRoute.value = ScreenRoute.StudentDashboard
+                    }
+                }
+            }
+        }
     }
 
     // Current User State
-    private val _currentUser = MutableStateFlow<UserEntity?>(
-        UserEntity(
-            id = "std_001",
-            name = "Aman Kumar",
-            email = "student@mithilahs.edu.in",
-            role = UserRole.STUDENT,
-            rollNumber = "10042",
-            admissionNumber = "MHS-2023-089",
-            className = "Class 10",
-            section = "A",
-            parentName = "Ramesh Kumar Thakur",
-            phone = "+91 9835412890",
-            address = "Balaur, Manigachhi, Darbhanga, Bihar"
-        )
-    )
+    private val _currentUser = MutableStateFlow<UserEntity?>(null)
     val currentUser: StateFlow<UserEntity?> = _currentUser.asStateFlow()
 
     // Users list for Super Admin & Admin Management
@@ -120,6 +123,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val selectedClass = MutableStateFlow("Class 10")
 
     fun navigateTo(route: ScreenRoute) {
+        val user = _currentUser.value
+        if (user != null) {
+            if (user.role == UserRole.STUDENT) {
+                if (route is ScreenRoute.SuperAdminDashboard || route is ScreenRoute.AdminDashboard || route is ScreenRoute.TeacherDashboard) {
+                    _currentRoute.value = ScreenRoute.StudentDashboard
+                    return
+                }
+            } else if (user.role == UserRole.TEACHER) {
+                if (route is ScreenRoute.SuperAdminDashboard || route is ScreenRoute.AdminDashboard) {
+                    _currentRoute.value = ScreenRoute.TeacherDashboard
+                    return
+                }
+            } else if (user.role == UserRole.ADMIN) {
+                if (route is ScreenRoute.SuperAdminDashboard) {
+                    _currentRoute.value = ScreenRoute.AdminDashboard
+                    return
+                }
+            }
+        }
         _currentRoute.value = route
     }
 
@@ -256,17 +278,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun switchRole(role: UserRole) {
-        val email = when (role) {
-            UserRole.SUPER_ADMIN -> "superadmin@mithilahs.edu.in"
-            UserRole.ADMIN -> "admin@mithilahs.edu.in"
-            UserRole.TEACHER -> "teacher@mithilahs.edu.in"
-            UserRole.STUDENT -> "student@mithilahs.edu.in"
+    fun updateUserProfile(phone: String, address: String, parentName: String, photoUrl: String, onResult: (Boolean, String) -> Unit) {
+        val user = _currentUser.value
+        if (user == null) {
+            onResult(false, "User not logged in")
+            return
         }
-        authenticateUser(email, "password123") { _, _ -> }
+        viewModelScope.launch {
+            val updated = user.copy(
+                phone = phone,
+                address = address,
+                parentName = parentName,
+                photoUrl = photoUrl
+            )
+            repository.saveUser(updated)
+            firebaseRepository.saveUserToFirestore(updated)
+            _currentUser.value = updated
+            onResult(true, "Profile updated in Firestore")
+        }
     }
 
     fun logout() {
+        com.example.data.firebase.FirebaseConfig.auth?.signOut()
         _currentUser.value = null
         _currentRoute.value = ScreenRoute.Auth
     }

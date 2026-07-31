@@ -12,6 +12,7 @@ class FirebaseRepository {
 
     private val auth get() = FirebaseConfig.auth
     private val firestore get() = FirebaseConfig.db
+    private val rtdb get() = FirebaseConfig.realtimeDb
 
     companion object {
         private const val TAG = "FirebaseRepository"
@@ -29,6 +30,11 @@ class FirebaseRepository {
         private const val GALLERY_COLLECTION = "gallery"
         private const val DOWNLOADS_COLLECTION = "downloads"
         private const val SYLLABUS_COLLECTION = "syllabus"
+        
+        // Realtime Database Nodes
+        private const val RTDB_CHAT_MESSAGES = "chat_messages"
+        private const val RTDB_PRESENCE = "user_presence"
+        private const val RTDB_NOTIFICATIONS = "notifications"
     }
 
     // ==========================================
@@ -677,6 +683,31 @@ class FirebaseRepository {
     private val USER_PRESENCE_COLLECTION = "user_presence"
 
     suspend fun sendChatMessageToFirestore(msg: ChatMessage) {
+        // Send to Realtime Database safely
+        try {
+            rtdb?.getReference(RTDB_CHAT_MESSAGES)
+                ?.child(msg.roomId)
+                ?.child(msg.id)
+                ?.setValue(
+                    mapOf(
+                        "id" to msg.id,
+                        "roomId" to msg.roomId,
+                        "senderId" to msg.senderId,
+                        "senderName" to msg.senderName,
+                        "senderRole" to msg.senderRole,
+                        "messageText" to msg.messageText,
+                        "timestamp" to msg.timestamp,
+                        "formattedTime" to msg.formattedTime,
+                        "replyToId" to msg.replyToId,
+                        "replyToText" to msg.replyToText,
+                        "replyToSender" to msg.replyToSender,
+                        "isDeleted" to msg.isDeleted
+                    )
+                )
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed sending message to RTDB: ${e.message}")
+        }
+
         val fs = firestore ?: return
         try {
             val map = mapOf(
@@ -708,6 +739,65 @@ class FirebaseRepository {
     }
 
     fun getChatMessagesFlow(roomId: String): Flow<List<ChatMessage>> = callbackFlow {
+        val db = rtdb
+        if (db != null) {
+            try {
+                val ref = db.getReference(RTDB_CHAT_MESSAGES).child(roomId)
+                val listener = object : com.google.firebase.database.ValueEventListener {
+                    override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                        try {
+                            val list = mutableListOf<ChatMessage>()
+                            if (snapshot.exists()) {
+                                for (child in snapshot.children) {
+                                    val id = child.key ?: continue
+                                    val roomIdVal = child.child("roomId").getValue(String::class.java) ?: roomId
+                                    val senderId = child.child("senderId").getValue(String::class.java) ?: ""
+                                    val senderName = child.child("senderName").getValue(String::class.java) ?: "User"
+                                    val senderRole = child.child("senderRole").getValue(String::class.java) ?: "STUDENT"
+                                    val messageText = child.child("messageText").getValue(String::class.java) ?: ""
+                                    val timestamp = child.child("timestamp").getValue(Long::class.java) ?: System.currentTimeMillis()
+                                    val formattedTime = child.child("formattedTime").getValue(String::class.java) ?: ""
+                                    val replyToId = child.child("replyToId").getValue(String::class.java) ?: ""
+                                    val replyToText = child.child("replyToText").getValue(String::class.java) ?: ""
+                                    val replyToSender = child.child("replyToSender").getValue(String::class.java) ?: ""
+                                    val isDeleted = child.child("isDeleted").getValue(Boolean::class.java) ?: false
+
+                                    list.add(
+                                        ChatMessage(
+                                            id = id,
+                                            roomId = roomIdVal,
+                                            senderId = senderId,
+                                            senderName = senderName,
+                                            senderRole = senderRole,
+                                            messageText = messageText,
+                                            timestamp = timestamp,
+                                            formattedTime = formattedTime,
+                                            replyToId = replyToId,
+                                            replyToText = replyToText,
+                                            replyToSender = replyToSender,
+                                            isDeleted = isDeleted
+                                        )
+                                    )
+                                }
+                            }
+                            trySend(list.sortedBy { it.timestamp })
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error parsing RTDB chat messages: ${e.message}")
+                        }
+                    }
+
+                    override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
+                        Log.w(TAG, "RTDB chat listener cancelled: ${error.message}")
+                    }
+                }
+                ref.addValueEventListener(listener)
+                awaitClose { ref.removeEventListener(listener) }
+                return@callbackFlow
+            } catch (e: Exception) {
+                Log.e(TAG, "Error setting up RTDB chat listener: ${e.message}")
+            }
+        }
+
         val fs = firestore
         if (fs == null) {
             trySend(emptyList())

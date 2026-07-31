@@ -88,13 +88,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 val res = firebaseRepository.authenticateUser(fbUser.email!!, "")
                 if (res.isSuccess) {
-                    val user = res.getOrNull()!!
-                    _currentUser.value = user
-                    when (user.role) {
-                        UserRole.SUPER_ADMIN -> _currentRoute.value = ScreenRoute.SuperAdminDashboard
-                        UserRole.ADMIN -> _currentRoute.value = ScreenRoute.AdminDashboard
-                        UserRole.TEACHER -> _currentRoute.value = ScreenRoute.TeacherDashboard
-                        UserRole.STUDENT -> _currentRoute.value = ScreenRoute.StudentDashboard
+                    val user = res.getOrNull()
+                    if (user != null) {
+                        _currentUser.value = user
+                        when (user.role) {
+                            UserRole.SUPER_ADMIN -> _currentRoute.value = ScreenRoute.SuperAdminDashboard
+                            UserRole.ADMIN -> _currentRoute.value = ScreenRoute.AdminDashboard
+                            UserRole.TEACHER -> _currentRoute.value = ScreenRoute.TeacherDashboard
+                            UserRole.STUDENT -> _currentRoute.value = ScreenRoute.StudentDashboard
+                        }
                     }
                 }
             }

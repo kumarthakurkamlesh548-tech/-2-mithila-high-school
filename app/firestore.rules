@@ -103,6 +103,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /syllabus/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher();
+    }
+
     match /subjects/{id} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();

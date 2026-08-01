@@ -15,8 +15,8 @@
         // Users can write their own profile; Super Admin can manage all profiles
         ".write": "auth != null && (auth.uid === $uid || auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN')",
 
-        // Prevent non-SuperAdmins from changing their own 'role' attribute (Privilege Escalation Prevention)
-        ".validate": "auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || (!newData.hasChild('role') || newData.child('role').val() === data.child('role').val())"
+        // Prevent non-SuperAdmins from changing their existing 'role' attribute (Privilege Escalation Prevention)
+        ".validate": "auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || !data.exists() || (!newData.hasChild('role') || newData.child('role').val() === data.child('role').val())"
       }
     },
 

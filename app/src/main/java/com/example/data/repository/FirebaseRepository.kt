@@ -165,7 +165,7 @@ class FirebaseRepository {
             }
         }
 
-        return UserEntity(
+        val superAdminUser = UserEntity(
             id = uid,
             name = (docData?.get("name") as? String) ?: "Super Administrator",
             email = cleanEmail,
@@ -173,6 +173,8 @@ class FirebaseRepository {
             isEnabled = true,
             permissions = AdminPermissions()
         )
+        saveUserToRealtimeDatabase(superAdminUser)
+        return superAdminUser
     }
 
     suspend fun authenticateUser(email: String, password: String): Result<UserEntity> {
@@ -218,6 +220,7 @@ class FirebaseRepository {
                     if (!user.isEnabled) {
                         return Result.failure(IllegalStateException("Account disabled by Super Admin"))
                     }
+                    saveUserToRealtimeDatabase(user)
                     return Result.success(user)
                 }
             }
@@ -291,16 +294,48 @@ class FirebaseRepository {
         }
     }
 
-    suspend fun saveUserToFirestore(user: UserEntity) {
-        val fs = firestore ?: return
-        try {
-            fs.collection(USERS_COLLECTION)
-                .document(user.id)
-                .set(userToMap(user))
-                .await()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed saving user to Firestore: ${e.message}")
+    suspend fun saveUserToRealtimeDatabase(user: UserEntity) {
+        val db = rtdb
+        if (db == null) {
+            Log.e(TAG, "Realtime Database instance is null! Cannot write to /users/${user.id}")
+            return
         }
+
+        val cleanEmail = user.email.lowercase().trim()
+        val isSuper = isSuperAdminEmail(cleanEmail)
+        val assignedRole = if (isSuper) "SUPER_ADMIN" else user.role.name
+
+        val userMap = mapOf(
+            "id" to user.id,
+            "name" to user.name.ifBlank { cleanEmail.substringBefore("@") },
+            "email" to cleanEmail,
+            "role" to assignedRole,
+            "createdAt" to System.currentTimeMillis()
+        )
+
+        try {
+            val userRef = db.getReference("users").child(user.id)
+            Log.d(TAG, "Attempting to write user profile to Realtime Database path: /users/${user.id} -> $userMap")
+            userRef.setValue(userMap).await()
+            Log.i(TAG, "SUCCESSFULLY written user profile to Realtime Database path: /users/${user.id}")
+        } catch (e: Exception) {
+            Log.e(TAG, "DatabaseException / Permission Denied error for path /users/${user.id}: ${e.message}", e)
+        }
+    }
+
+    suspend fun saveUserToFirestore(user: UserEntity) {
+        val fs = firestore
+        if (fs != null) {
+            try {
+                fs.collection(USERS_COLLECTION)
+                    .document(user.id)
+                    .set(userToMap(user))
+                    .await()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed saving user to Firestore: ${e.message}")
+            }
+        }
+        saveUserToRealtimeDatabase(user)
     }
 
     suspend fun saveStudentToFirestore(user: UserEntity) {
@@ -931,20 +966,28 @@ class FirebaseRepository {
         typingInRoomId: String
     ) {
         if (userId.isBlank()) return
+        val map = mapOf(
+            "userId" to userId,
+            "userName" to userName,
+            "userRole" to userRole,
+            "isOnline" to isOnline,
+            "lastSeen" to System.currentTimeMillis(),
+            "isTyping" to isTyping,
+            "typingInRoomId" to typingInRoomId
+        )
+
+        try {
+            rtdb?.getReference(RTDB_PRESENCE)?.child(userId)?.setValue(map)?.await()
+            Log.d(TAG, "Updated presence in Realtime Database at /user_presence/$userId")
+        } catch (e: Exception) {
+            Log.e(TAG, "DatabaseException / Permission Denied writing /user_presence/$userId: ${e.message}", e)
+        }
+
         val fs = firestore ?: return
         try {
-            val map = mapOf(
-                "userId" to userId,
-                "userName" to userName,
-                "userRole" to userRole,
-                "isOnline" to isOnline,
-                "lastSeen" to System.currentTimeMillis(),
-                "isTyping" to isTyping,
-                "typingInRoomId" to typingInRoomId
-            )
             fs.collection(USER_PRESENCE_COLLECTION).document(userId).set(map, com.google.firebase.firestore.SetOptions.merge()).await()
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating presence", e)
+            Log.e(TAG, "Error updating presence in Firestore", e)
         }
     }
 

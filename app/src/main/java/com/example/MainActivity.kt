@@ -243,15 +243,36 @@ class MainActivity : ComponentActivity() {
                                     )
 
                                     ScreenRoute.Syllabus -> SyllabusScreen(
-                                        syllabusList = syllabusList
+                                        syllabusList = syllabusList,
+                                        userRole = currentUser?.role,
+                                        onAddSyllabus = { cls, sub, topics, driveUrl ->
+                                            viewModel.addSyllabus(cls, sub, topics, driveUrl)
+                                        },
+                                        onDeleteSyllabus = { id ->
+                                            viewModel.deleteSyllabus(id)
+                                        }
                                     )
 
                                     ScreenRoute.StudyMaterial -> StudyMaterialScreen(
-                                        studyMaterials = studyMaterials
+                                        studyMaterials = studyMaterials,
+                                        userRole = currentUser?.role,
+                                        onAddStudyMaterial = { title, cls, sub, type, desc, url ->
+                                            viewModel.addStudyMaterial(title, cls, sub, type, desc, url)
+                                        },
+                                        onDeleteStudyMaterial = { id ->
+                                            viewModel.deleteStudyMaterial(id)
+                                        }
                                     )
 
                                     ScreenRoute.Homework -> HomeworkScreen(
-                                        homeworkList = homeworkList
+                                        homeworkList = homeworkList,
+                                        userRole = currentUser?.role,
+                                        onAddHomework = { title, cls, sub, desc, dueDate, driveUrl ->
+                                            viewModel.addHomework(title, cls, sub, desc, dueDate, driveUrl)
+                                        },
+                                        onDeleteHomework = { id ->
+                                            viewModel.deleteHomework(id)
+                                        }
                                     )
 
                                     ScreenRoute.Attendance -> AttendanceScreen(
@@ -262,7 +283,14 @@ class MainActivity : ComponentActivity() {
                                     )
 
                                     ScreenRoute.Timetable -> TimetableScreen(
-                                        timetables = timetables
+                                        timetables = timetables,
+                                        userRole = currentUser?.role,
+                                        onAddTimetable = { cls, day, pNum, time, sub, teacher ->
+                                            viewModel.addTimetableItem(cls, day, pNum, time, sub, teacher)
+                                        },
+                                        onDeleteTimetable = { id ->
+                                            viewModel.deleteTimetableItem(id)
+                                        }
                                     )
 
                                     ScreenRoute.Chat -> ChatScreen(
@@ -305,6 +333,9 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onUpdateStatus = { doubtId, status ->
                                             viewModel.updateDoubtStatus(doubtId, status)
+                                        },
+                                        onDeleteDoubt = { doubtId ->
+                                            viewModel.deleteDoubt(doubtId)
                                         }
                                     )
 
@@ -313,19 +344,43 @@ class MainActivity : ComponentActivity() {
                                         userRole = currentUser?.role,
                                         onAddNotice = { title, content, cat ->
                                             viewModel.addNotice(title, content, cat)
+                                        },
+                                        onDeleteNotice = { noticeId ->
+                                            viewModel.deleteNotice(noticeId)
                                         }
                                     )
 
                                     ScreenRoute.Gallery -> GalleryScreen(
-                                        galleryItems = galleryItems
+                                        galleryItems = galleryItems,
+                                        userRole = currentUser?.role,
+                                        onAddPhoto = { title, cat, url ->
+                                            viewModel.addGalleryItem(title, cat, url)
+                                        },
+                                        onDeletePhoto = { id ->
+                                            viewModel.deleteGalleryItem(id)
+                                        }
                                     )
 
                                     ScreenRoute.Events -> EventsScreen(
-                                        events = events
+                                        events = events,
+                                        userRole = currentUser?.role,
+                                        onAddEvent = { title, date, time, venue, desc ->
+                                            viewModel.addEvent(title, date, time, venue, desc)
+                                        },
+                                        onDeleteEvent = { id ->
+                                            viewModel.deleteEvent(id)
+                                        }
                                     )
 
                                     ScreenRoute.Downloads -> DownloadsScreen(
-                                        downloads = downloads
+                                        downloads = downloads,
+                                        userRole = currentUser?.role,
+                                        onAddDownload = { title, cat, fileSize, url ->
+                                            viewModel.addDownload(title, cat, fileSize, url)
+                                        },
+                                        onDeleteDownload = { id ->
+                                            viewModel.deleteDownload(id)
+                                        }
                                     )
 
                                     ScreenRoute.Profile -> ProfileScreen(

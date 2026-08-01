@@ -475,7 +475,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 NoticeEntity(
                     title = title,
                     content = content,
-                    date = "30 July 2026",
+                    date = "01 Aug 2026",
                     category = category,
                     postedBy = _currentUser.value?.name ?: "School Office"
                 )
@@ -483,7 +483,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun addHomework(title: String, className: String, subject: String, desc: String, dueDate: String) {
+    fun deleteNotice(noticeId: Int) {
+        viewModelScope.launch { repository.deleteNotice(noticeId) }
+    }
+
+    fun addHomework(title: String, className: String, subject: String, desc: String, dueDate: String, driveUrl: String = "") {
         viewModelScope.launch {
             repository.addHomework(
                 HomeworkEntity(
@@ -493,10 +497,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     description = desc,
                     dueDate = dueDate,
                     assignedBy = _currentUser.value?.name ?: "Subject Teacher",
-                    datePosted = "30 July 2026"
+                    datePosted = "01 Aug 2026",
+                    driveUrl = driveUrl
                 )
             )
         }
+    }
+
+    fun deleteHomework(id: Int) {
+        viewModelScope.launch { repository.deleteHomework(id) }
     }
 
     fun addStudyMaterial(title: String, className: String, subject: String, type: String, desc: String, url: String) {
@@ -509,9 +518,99 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     type = type,
                     description = desc,
                     fileOrVideoUrl = url,
-                    dateUploaded = "30 July 2026"
+                    dateUploaded = "01 Aug 2026"
                 )
             )
+        }
+    }
+
+    fun deleteStudyMaterial(id: Int) {
+        viewModelScope.launch { repository.deleteStudyMaterial(id) }
+    }
+
+    fun addSyllabus(className: String, subject: String, topics: String, driveUrl: String) {
+        viewModelScope.launch {
+            repository.addSyllabus(
+                SyllabusEntity(className = className, subject = subject, topics = topics, downloadUrl = driveUrl)
+            )
+        }
+    }
+
+    fun deleteSyllabus(id: Int) {
+        viewModelScope.launch { repository.deleteSyllabus(id) }
+    }
+
+    fun addGalleryItem(title: String, category: String, url: String) {
+        viewModelScope.launch {
+            repository.addGalleryItem(
+                GalleryEntity(title = title, category = category, imageResName = url, date = "01 Aug 2026")
+            )
+        }
+    }
+
+    fun deleteGalleryItem(id: Int) {
+        viewModelScope.launch { repository.deleteGalleryItem(id) }
+    }
+
+    fun addEvent(title: String, date: String, time: String, venue: String, description: String) {
+        viewModelScope.launch {
+            repository.addEvent(
+                EventEntity(title = title, date = date, time = time, venue = venue, description = description)
+            )
+        }
+    }
+
+    fun deleteEvent(id: Int) {
+        viewModelScope.launch { repository.deleteEvent(id) }
+    }
+
+    fun addDownload(title: String, category: String, fileSize: String, driveUrl: String) {
+        viewModelScope.launch {
+            repository.addDownload(
+                DownloadEntity(title = title, category = category, fileSize = fileSize, driveUrl = driveUrl)
+            )
+        }
+    }
+
+    fun deleteDownload(id: Int) {
+        viewModelScope.launch { repository.deleteDownload(id) }
+    }
+
+    fun addTimetableItem(className: String, dayOfWeek: String, periodNumber: Int, timeSlot: String, subject: String, teacherName: String) {
+        viewModelScope.launch {
+            repository.addTimetableItem(
+                TimetableEntity(className = className, dayOfWeek = dayOfWeek, periodNumber = periodNumber, timeSlot = timeSlot, subject = subject, teacherName = teacherName)
+            )
+        }
+    }
+
+    fun deleteTimetableItem(id: Int) {
+        viewModelScope.launch { repository.deleteTimetable(id) }
+    }
+
+    fun deleteDoubt(id: Int) {
+        viewModelScope.launch { repository.deleteDoubt(id) }
+    }
+
+    fun createGroupChatRoom(title: String, memberIds: List<String>) {
+        val user = _currentUser.value ?: return
+        val roomId = "group_${System.currentTimeMillis()}"
+        val room = ChatRoom(
+            id = roomId,
+            title = title,
+            isGroup = true,
+            participantIds = (memberIds + user.id).distinct(),
+            participantNames = listOf(title)
+        )
+        viewModelScope.launch {
+            repository.saveChatRoom(room)
+            firebaseRepository.createOrUpdateChatRoom(room)
+        }
+    }
+
+    fun deleteChatRoom(roomId: String) {
+        viewModelScope.launch {
+            repository.deleteChatRoom(roomId)
         }
     }
 

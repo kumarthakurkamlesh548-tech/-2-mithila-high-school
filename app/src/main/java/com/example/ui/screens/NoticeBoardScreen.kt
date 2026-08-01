@@ -8,8 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,17 +30,23 @@ import com.example.ui.theme.SecondaryBlue
 fun NoticeBoardScreen(
     notices: List<NoticeEntity>,
     userRole: UserRole?,
-    onAddNotice: (title: String, content: String, category: String) -> Unit
+    onAddNotice: (title: String, content: String, category: String) -> Unit,
+    onDeleteNotice: (Int) -> Unit = {}
 ) {
+    val canManage = userRole == UserRole.ADMIN || userRole == UserRole.SUPER_ADMIN || userRole == UserRole.TEACHER
     var selectedCategory by remember { mutableStateOf("All") }
     var showAddDialog by remember { mutableStateOf(false) }
+    var pinnedNoticeIds by remember { mutableStateOf(setOf<Int>()) }
 
     var titleInput by remember { mutableStateOf("") }
     var contentInput by remember { mutableStateOf("") }
     var catInput by remember { mutableStateOf("Academic") }
+    var driveUrlInput by remember { mutableStateOf("") }
+    var snackbarMsg by remember { mutableStateOf("") }
 
     val categories = listOf("All", "Exam", "Event", "Academic", "Urgent")
     val filtered = notices.filter { selectedCategory == "All" || it.category.equals(selectedCategory, ignoreCase = true) }
+        .sortedByDescending { pinnedNoticeIds.contains(it.id) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -71,7 +76,7 @@ fun NoticeBoardScreen(
                         )
                     }
 
-                    if (userRole == UserRole.ADMIN || userRole == UserRole.SUPER_ADMIN || userRole == UserRole.TEACHER) {
+                    if (canManage) {
                         FloatingActionButton(
                             onClick = { showAddDialog = true },
                             containerColor = PrimaryBlue,
@@ -120,6 +125,7 @@ fun NoticeBoardScreen(
                 }
             } else {
                 items(filtered) { notice ->
+                    val isPinned = pinnedNoticeIds.contains(notice.id)
                     GlassmorphicCard(cornerRadius = 20.dp) {
                         Column {
                             Row(
@@ -127,25 +133,43 @@ fun NoticeBoardScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Surface(
-                                    color = when(notice.category.lowercase()) {
-                                        "urgent" -> Color(0xFFEF4444).copy(alpha = 0.15f)
-                                        "exam" -> Color(0xFF3B82F6).copy(alpha = 0.15f)
-                                        else -> SecondaryBlue
-                                    },
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Text(
-                                        text = notice.category.uppercase(),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(
                                         color = when(notice.category.lowercase()) {
-                                            "urgent" -> Color(0xFFEF4444)
-                                            "exam" -> Color(0xFF3B82F6)
-                                            else -> PrimaryDarkBlue
+                                            "urgent" -> Color(0xFFEF4444).copy(alpha = 0.15f)
+                                            "exam" -> Color(0xFF3B82F6).copy(alpha = 0.15f)
+                                            else -> SecondaryBlue
                                         },
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text(
+                                            text = notice.category.uppercase(),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = when(notice.category.lowercase()) {
+                                                "urgent" -> Color(0xFFEF4444)
+                                                "exam" -> Color(0xFF3B82F6)
+                                                else -> PrimaryDarkBlue
+                                            },
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+
+                                    if (isPinned) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            color = Color(0xFFFEF3C7),
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                text = "PINNED",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFD97706),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
                                 }
 
                                 Text(text = notice.date, fontSize = 11.sp, color = Color(0xFF94A3B8))
@@ -180,7 +204,7 @@ fun NoticeBoardScreen(
                                                 val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
                                                 context.startActivity(intent)
                                             } catch (e: Exception) {
-                                                // ignore
+                                                snackbarMsg = "Unable to open Drive link"
                                             }
                                         }
                                     },
@@ -193,12 +217,49 @@ fun NoticeBoardScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            Text(
-                                text = "Issued by: ${notice.postedBy}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF64748B)
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Issued by: ${notice.postedBy}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF64748B)
+                                )
+
+                                if (canManage) {
+                                    Row {
+                                        IconButton(
+                                            onClick = {
+                                                pinnedNoticeIds = if (isPinned) pinnedNoticeIds - notice.id else pinnedNoticeIds + notice.id
+                                                snackbarMsg = if (isPinned) "Notice unpinned" else "Notice pinned to top"
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.PushPin,
+                                                contentDescription = "Pin",
+                                                tint = if (isPinned) Color(0xFFD97706) else Color.Gray,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                onDeleteNotice(notice.id)
+                                                snackbarMsg = "Notice deleted"
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete",
+                                                tint = Color(0xFFEF4444),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -219,12 +280,26 @@ fun NoticeBoardScreen(
                             shape = RoundedCornerShape(12.dp)
                         )
                         OutlinedTextField(
+                            value = catInput,
+                            onValueChange = { catInput = it },
+                            label = { Text("Category (Academic, Exam, Urgent, Event)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        OutlinedTextField(
                             value = contentInput,
                             onValueChange = { contentInput = it },
                             label = { Text("Detailed Circular Text") },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(120.dp),
+                                .height(100.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        OutlinedTextField(
+                            value = driveUrlInput,
+                            onValueChange = { driveUrlInput = it },
+                            label = { Text("Google Drive Document Link (Optional)") },
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         )
                     }
@@ -236,7 +311,9 @@ fun NoticeBoardScreen(
                                 onAddNotice(titleInput, contentInput, catInput)
                                 titleInput = ""
                                 contentInput = ""
+                                driveUrlInput = ""
                                 showAddDialog = false
+                                snackbarMsg = "Notice published successfully!"
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
@@ -248,6 +325,17 @@ fun NoticeBoardScreen(
                     TextButton(onClick = { showAddDialog = false }) { Text("Cancel") }
                 }
             )
+        }
+
+        if (snackbarMsg.isNotEmpty()) {
+            Snackbar(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
+                action = { TextButton(onClick = { snackbarMsg = "" }) { Text("OK", color = Color.White) } }
+            ) {
+                Text(snackbarMsg)
+            }
         }
     }
 }

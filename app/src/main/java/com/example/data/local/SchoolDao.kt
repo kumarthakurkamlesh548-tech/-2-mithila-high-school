@@ -72,6 +72,9 @@ interface SchoolDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSyllabus(syllabus: SyllabusEntity)
 
+    @Query("DELETE FROM syllabus WHERE id = :id")
+    suspend fun deleteSyllabus(id: Int)
+
     // Study Material
     @Query("SELECT * FROM study_materials WHERE className = :className ORDER BY id DESC")
     fun getStudyMaterialByClass(className: String): Flow<List<StudyMaterialEntity>>
@@ -94,6 +97,9 @@ interface SchoolDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHomework(homework: HomeworkEntity)
+
+    @Query("DELETE FROM homework WHERE id = :id")
+    suspend fun deleteHomework(id: Int)
 
     // Homework Submissions
     @Query("SELECT * FROM homework_submissions WHERE homeworkId = :homeworkId")
@@ -122,6 +128,9 @@ interface SchoolDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTimetableItem(item: TimetableEntity)
 
+    @Query("DELETE FROM timetable WHERE id = :id")
+    suspend fun deleteTimetable(id: Int)
+
     // Doubts
     @Query("SELECT * FROM doubts ORDER BY id DESC")
     fun getAllDoubts(): Flow<List<DoubtEntity>>
@@ -131,6 +140,9 @@ interface SchoolDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDoubt(doubt: DoubtEntity)
+
+    @Query("DELETE FROM doubts WHERE id = :id")
+    suspend fun deleteDoubt(id: Int)
 
     @Query("UPDATE doubts SET status = :status WHERE id = :id")
     suspend fun updateDoubtStatus(id: Int, status: String)
@@ -148,12 +160,18 @@ interface SchoolDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertGalleryItem(item: GalleryEntity)
 
+    @Query("DELETE FROM gallery WHERE id = :id")
+    suspend fun deleteGalleryItem(id: Int)
+
     // Events
     @Query("SELECT * FROM events ORDER BY id DESC")
     fun getAllEvents(): Flow<List<EventEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEvent(event: EventEntity)
+
+    @Query("DELETE FROM events WHERE id = :id")
+    suspend fun deleteEvent(id: Int)
 
     // Downloads
     @Query("SELECT * FROM downloads ORDER BY id DESC")
@@ -162,12 +180,18 @@ interface SchoolDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDownload(download: DownloadEntity)
 
+    @Query("DELETE FROM downloads WHERE id = :id")
+    suspend fun deleteDownload(id: Int)
+
     // Chat Rooms
     @Query("SELECT * FROM chat_rooms ORDER BY lastMessageTimestamp DESC")
     fun getAllChatRooms(): Flow<List<ChatRoom>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChatRoom(room: ChatRoom)
+
+    @Query("DELETE FROM chat_rooms WHERE id = :id")
+    suspend fun deleteChatRoom(id: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChatRooms(rooms: List<ChatRoom>)

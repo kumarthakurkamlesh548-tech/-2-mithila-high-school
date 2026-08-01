@@ -34,6 +34,7 @@ class SchoolRepository(private val dao: SchoolDao) {
     fun getSyllabusByClass(className: String) = dao.getSyllabusByClass(className)
     val allSyllabus = dao.getAllSyllabus()
     suspend fun addSyllabus(syllabus: SyllabusEntity) = dao.insertSyllabus(syllabus)
+    suspend fun deleteSyllabus(id: Int) = dao.deleteSyllabus(id)
 
     // Study Materials
     fun getStudyMaterialByClass(className: String) = dao.getStudyMaterialByClass(className)
@@ -45,6 +46,7 @@ class SchoolRepository(private val dao: SchoolDao) {
     fun getHomeworkByClass(className: String) = dao.getHomeworkByClass(className)
     val allHomework = dao.getAllHomework()
     suspend fun addHomework(homework: HomeworkEntity) = dao.insertHomework(homework)
+    suspend fun deleteHomework(id: Int) = dao.deleteHomework(id)
 
     // Homework Submissions
     fun getSubmissionsForHomework(homeworkId: Int) = dao.getSubmissionsForHomework(homeworkId)
@@ -59,11 +61,13 @@ class SchoolRepository(private val dao: SchoolDao) {
     fun getTimetableByClass(className: String) = dao.getTimetableByClass(className)
     val allTimetables = dao.getAllTimetables()
     suspend fun addTimetableItem(item: TimetableEntity) = dao.insertTimetableItem(item)
+    suspend fun deleteTimetable(id: Int) = dao.deleteTimetable(id)
 
     // Doubts
     val allDoubts = dao.getAllDoubts()
     fun getDoubtsForStudent(studentId: String) = dao.getDoubtsForStudent(studentId)
     suspend fun askDoubt(doubt: DoubtEntity) = dao.insertDoubt(doubt)
+    suspend fun deleteDoubt(id: Int) = dao.deleteDoubt(id)
     suspend fun updateDoubtStatus(doubtId: Int, status: String) = dao.updateDoubtStatus(doubtId, status)
     fun getRepliesForDoubt(doubtId: Int) = dao.getRepliesForDoubt(doubtId)
     suspend fun replyDoubt(reply: DoubtReplyEntity) = dao.insertDoubtReply(reply)
@@ -71,18 +75,22 @@ class SchoolRepository(private val dao: SchoolDao) {
     // Gallery
     val galleryItems = dao.getAllGalleryItems()
     suspend fun addGalleryItem(item: GalleryEntity) = dao.insertGalleryItem(item)
+    suspend fun deleteGalleryItem(id: Int) = dao.deleteGalleryItem(id)
 
     // Events
     val allEvents = dao.getAllEvents()
     suspend fun addEvent(event: EventEntity) = dao.insertEvent(event)
+    suspend fun deleteEvent(id: Int) = dao.deleteEvent(id)
 
     // Downloads
     val allDownloads = dao.getAllDownloads()
     suspend fun addDownload(download: DownloadEntity) = dao.insertDownload(download)
+    suspend fun deleteDownload(id: Int) = dao.deleteDownload(id)
 
     // Chat
     val allChatRooms: Flow<List<ChatRoom>> = dao.getAllChatRooms()
     suspend fun saveChatRoom(room: ChatRoom) = dao.insertChatRoom(room)
+    suspend fun deleteChatRoom(id: String) = dao.deleteChatRoom(id)
     suspend fun saveChatRooms(rooms: List<ChatRoom>) = dao.insertChatRooms(rooms)
     fun getMessagesForRoom(roomId: String): Flow<List<ChatMessage>> = dao.getMessagesForRoom(roomId)
     suspend fun saveChatMessage(message: ChatMessage) = dao.insertChatMessage(message)

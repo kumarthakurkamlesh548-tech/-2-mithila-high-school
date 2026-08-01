@@ -39,7 +39,8 @@ fun DoubtSection(
     currentUserName: String = "",
     onAskDoubt: (subject: String, question: String) -> Unit,
     onReplyDoubt: (doubtId: Int, replyText: String) -> Unit,
-    onUpdateStatus: (doubtId: Int, newStatus: String) -> Unit = { _, _ -> }
+    onUpdateStatus: (doubtId: Int, newStatus: String) -> Unit = { _, _ -> },
+    onDeleteDoubt: (doubtId: Int) -> Unit = {}
 ) {
     var subjectInput by remember { mutableStateOf("Mathematics") }
     var questionInput by remember { mutableStateOf("") }
@@ -357,18 +358,42 @@ fun DoubtSection(
                                 }
                             }
 
-                            // Status Badge
-                            Surface(
-                                color = statusColor.copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text(
-                                    text = displayStatus,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = statusColor,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Status Badge
+                                Surface(
+                                    color = statusColor.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text(
+                                        text = displayStatus,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = statusColor,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+
+                                val canDeleteDoubt = userRole == UserRole.SUPER_ADMIN ||
+                                        userRole == UserRole.ADMIN ||
+                                        doubt.studentId == currentUserId
+
+                                if (canDeleteDoubt) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    IconButton(
+                                        onClick = {
+                                            onDeleteDoubt(doubt.id)
+                                            snackbarMsg = "Doubt deleted"
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete Doubt",
+                                            tint = Color(0xFFEF4444),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
 

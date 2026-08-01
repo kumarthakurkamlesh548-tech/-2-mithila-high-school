@@ -16,13 +16,9 @@ object FirebaseConfig {
 
     val isFirebaseReady: Boolean
         get() = try {
-            FirebaseApp.getApps(com.example.MithilaApplication.instance).isNotEmpty()
-        } catch (e: Exception) {
-            try {
-                FirebaseApp.getInstance() != null
-            } catch (ex: Exception) {
-                false
-            }
+            FirebaseApp.getInstance() != null
+        } catch (e: Throwable) {
+            false
         }
 
     val auth: FirebaseAuth?
@@ -32,7 +28,7 @@ object FirebaseConfig {
             } else {
                 null
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e("FirebaseConfig", "FirebaseAuth error: ${e.message}")
             null
         }
@@ -44,7 +40,7 @@ object FirebaseConfig {
             } else {
                 null
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e("FirebaseConfig", "FirebaseFirestore error: ${e.message}")
             null
         }
@@ -53,15 +49,11 @@ object FirebaseConfig {
         get() = try {
             if (isFirebaseReady) {
                 val app = FirebaseApp.getInstance()
-                try {
-                    FirebaseDatabase.getInstance(app, RTDB_URL)
-                } catch (e: Exception) {
-                    FirebaseDatabase.getInstance()
-                }
+                FirebaseDatabase.getInstance(app, RTDB_URL)
             } else {
                 null
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e("FirebaseConfig", "FirebaseDatabase error: ${e.message}")
             null
         }

@@ -76,13 +76,59 @@ sealed class ScreenRoute(val route: String, val title: String) {
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository: SchoolRepository
+    private val dao = SchoolDatabase.getDatabase(application).schoolDao()
+    private val repository: SchoolRepository = SchoolRepository(dao)
     private val firebaseRepository = com.example.data.repository.FirebaseRepository()
 
-    init {
-        val dao = SchoolDatabase.getDatabase(application).schoolDao()
-        repository = SchoolRepository(dao)
+    // Current User State
+    private val _currentUser = MutableStateFlow<UserEntity?>(null)
+    val currentUser: StateFlow<UserEntity?> = _currentUser.asStateFlow()
 
+    // Chat State
+    val activeRoomId = MutableStateFlow("group_general")
+
+    private val _chatRooms = MutableStateFlow<List<ChatRoom>>(emptyList())
+    val chatRooms: StateFlow<List<ChatRoom>> = _chatRooms.asStateFlow()
+
+    private val _currentRoomMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val currentRoomMessages: StateFlow<List<ChatMessage>> = _currentRoomMessages.asStateFlow()
+
+    private val _userPresences = MutableStateFlow<List<UserPresence>>(emptyList())
+    val userPresences: StateFlow<List<UserPresence>> = _userPresences.asStateFlow()
+
+    // Users list for Super Admin & Admin Management
+    val allUsers: StateFlow<List<UserEntity>> = repository.allUsers.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        emptyList()
+    )
+
+    // Navigation State
+    private val _currentRoute = MutableStateFlow<ScreenRoute>(ScreenRoute.Splash)
+    val currentRoute: StateFlow<ScreenRoute> = _currentRoute.asStateFlow()
+
+    // App Preferences
+    val isDarkMode = MutableStateFlow(false)
+    val currentLanguage = MutableStateFlow("English")
+    val notificationsEnabled = MutableStateFlow(true)
+
+    // Reactive DB Streams
+    val notices = repository.allNotices.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val results = repository.allResults.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val syllabusList = repository.allSyllabus.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val studyMaterials = repository.allStudyMaterials.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val homeworkList = repository.allHomework.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val timetables = repository.allTimetables.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val doubts = repository.allDoubts.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val galleryItems = repository.galleryItems.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val events = repository.allEvents.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val downloads = repository.allDownloads.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val activityLogs = repository.allActivityLogs.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val announcements = repository.allAnnouncements.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val notifications = repository.allNotifications.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val favorites = repository.allFavorites.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    init {
         val fbUser = com.example.data.firebase.FirebaseConfig.auth?.currentUser
         if (fbUser != null && !fbUser.email.isNullOrBlank()) {
             viewModelScope.launch {
@@ -149,54 +195,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-
-    // Current User State
-    private val _currentUser = MutableStateFlow<UserEntity?>(null)
-    val currentUser: StateFlow<UserEntity?> = _currentUser.asStateFlow()
-
-    // Chat State
-    val activeRoomId = MutableStateFlow("group_general")
-
-    private val _chatRooms = MutableStateFlow<List<ChatRoom>>(emptyList())
-    val chatRooms: StateFlow<List<ChatRoom>> = _chatRooms.asStateFlow()
-
-    private val _currentRoomMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
-    val currentRoomMessages: StateFlow<List<ChatMessage>> = _currentRoomMessages.asStateFlow()
-
-    private val _userPresences = MutableStateFlow<List<UserPresence>>(emptyList())
-    val userPresences: StateFlow<List<UserPresence>> = _userPresences.asStateFlow()
-
-    // Users list for Super Admin & Admin Management
-    val allUsers: StateFlow<List<UserEntity>> = repository.allUsers.stateIn(
-        viewModelScope,
-        SharingStarted.Eagerly,
-        emptyList()
-    )
-
-    // Navigation State
-    private val _currentRoute = MutableStateFlow<ScreenRoute>(ScreenRoute.Splash)
-    val currentRoute: StateFlow<ScreenRoute> = _currentRoute.asStateFlow()
-
-    // App Preferences
-    val isDarkMode = MutableStateFlow(false)
-    val currentLanguage = MutableStateFlow("English")
-    val notificationsEnabled = MutableStateFlow(true)
-
-    // Reactive DB Streams
-    val notices = repository.allNotices.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val results = repository.allResults.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val syllabusList = repository.allSyllabus.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val studyMaterials = repository.allStudyMaterials.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val homeworkList = repository.allHomework.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val timetables = repository.allTimetables.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val doubts = repository.allDoubts.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val galleryItems = repository.galleryItems.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val events = repository.allEvents.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val downloads = repository.allDownloads.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val activityLogs = repository.allActivityLogs.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val announcements = repository.allAnnouncements.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val notifications = repository.allNotifications.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    val favorites = repository.allFavorites.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun logActivity(actionType: String, details: String) {
         viewModelScope.launch {

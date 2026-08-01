@@ -1,0 +1,134 @@
+{
+  "rules": {
+    /* DEFAULT SECURITY: DENY ALL PUBLIC/ANONYMOUS READ AND WRITE ACCESS */
+    ".read": false,
+    ".write": false,
+
+    /* -------------------------------------------------------------
+       1. USERS NODE: Profile management and Role-Based Permissions
+       ------------------------------------------------------------- */
+    "users": {
+      "$uid": {
+        // Authenticated users can view user profiles
+        ".read": "auth != null",
+
+        // Users can write their own profile; Super Admin can manage all profiles
+        ".write": "auth != null && (auth.uid === $uid || auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN')",
+
+        // Prevent non-SuperAdmins from changing their own 'role' attribute (Privilege Escalation Prevention)
+        ".validate": "auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || (!newData.hasChild('role') || newData.child('role').val() === data.child('role').val())"
+      }
+    },
+
+    /* -------------------------------------------------------------
+       2. USER PRESENCE NODE: Online status, last seen, typing indicators
+       ------------------------------------------------------------- */
+    "user_presence": {
+      "$uid": {
+        // Any authenticated user can observe online presence and typing status
+        ".read": "auth != null",
+
+        // Strict Ownership: Users can ONLY update/modify their OWN presence
+        ".write": "auth != null && auth.uid === $uid",
+
+        // Data schema validation
+        ".validate": "newData.hasChildren(['userId', 'isOnline']) && newData.child('userId').val() === $uid"
+      }
+    },
+
+    /* -------------------------------------------------------------
+       3. CHAT ROOMS NODE: Group and 1-on-1 private chat metadata
+       ------------------------------------------------------------- */
+    "chat_rooms": {
+      "$roomId": {
+        // Public group rooms readable by all auth users; Private rooms readable by participants & admins
+        ".read": "auth != null && (data.child('isGroup').val() === true || data.child('participantIds/' + auth.uid).exists() || auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+
+        // Authenticated users can create or update rooms they participate in
+        ".write": "auth != null && (auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'ADMIN' || !data.exists() || data.child('isGroup').val() === true || data.child('participantIds/' + auth.uid).exists())"
+      }
+    },
+
+    /* -------------------------------------------------------------
+       4. CHAT MESSAGES NODE: Real-time messaging with privacy and ownership
+       ------------------------------------------------------------- */
+    "chat_messages": {
+      "$roomId": {
+        // Read messages if room is group, or user is participant, or user is admin
+        ".read": "auth != null && (!root.child('chat_rooms').child($roomId).exists() || root.child('chat_rooms').child($roomId).child('isGroup').val() === true || root.child('chat_rooms').child($roomId).child('participantIds/' + auth.uid).exists() || auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+
+        "$messageId": {
+          // Message Creation: Authenticated sender matching auth.uid
+          ".write": "auth != null && ( (!data.exists() && newData.child('senderId').val() === auth.uid) || (data.exists() && (data.child('senderId').val() === auth.uid || auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')) )",
+
+          // Validation rules for message structure and editing
+          ".validate": "newData.hasChildren(['id', 'roomId', 'senderId', 'messageText', 'timestamp'])"
+        }
+      }
+    },
+
+    /* -------------------------------------------------------------
+       5. DOUBTS NODE: Student questions & Admin/Teacher responses
+       ------------------------------------------------------------- */
+    "doubts": {
+      // All authenticated students, teachers, and admins can read doubts
+      ".read": "auth != null",
+
+      "$doubtId": {
+        // Student creates their own doubt; Admins/Teachers update/answer; Student edits own question
+        ".write": "auth != null && ( (!data.exists() && newData.child('studentId').val() === auth.uid) || (data.exists() && (data.child('studentId').val() === auth.uid || auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'TEACHER')) )",
+
+        // Deletion restriction: Only Admin or Super Admin can delete doubts created by others
+        ".validate": "newData.exists() || (data.child('studentId').val() === auth.uid || auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')"
+      }
+    },
+
+    /* -------------------------------------------------------------
+       6. NOTIFICATIONS NODE: Targeted personal notifications
+       ------------------------------------------------------------- */
+    "notifications": {
+      "$uid": {
+        // User can ONLY read their own notifications
+        ".read": "auth != null && auth.uid === $uid",
+
+        // Admin/SuperAdmin can create notifications for any user; Users can update 'isRead' status on their own node
+        ".write": "auth != null && (auth.uid === $uid || auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')"
+      }
+    },
+
+    /* -------------------------------------------------------------
+       7. REPORTS NODE: Flagged chat messages & content reports
+       ------------------------------------------------------------- */
+    "reports": {
+      // Only Admin and Super Admin can view user reports
+      ".read": "auth != null && (auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')",
+
+      "$reportId": {
+        // Any authenticated user can submit a report for themselves
+        ".write": "auth != null && ( (!data.exists() && newData.child('reportedBy').val() === auth.uid) || (auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'ADMIN') )"
+      }
+    },
+
+    /* -------------------------------------------------------------
+       8. BLOCKED WORDS NODE: Content moderation word list
+       ------------------------------------------------------------- */
+    "blocked_words": {
+      // Read by all authenticated users for client-side chat moderation
+      ".read": "auth != null",
+
+      // ONLY Super Admin can manage blocked words
+      ".write": "auth != null && (auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN')"
+    },
+
+    /* -------------------------------------------------------------
+       9. ACTIVITY LOGS NODE: Audit trails and administrative logs
+       ------------------------------------------------------------- */
+    "activity_logs": {
+      // ONLY Super Admin can view audit activity logs
+      ".read": "auth != null && (auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN')",
+
+      // ONLY Super Admin (or authorized admin logger) can write logs
+      ".write": "auth != null && (auth.token.email === 'kumarthakurkamlesh266@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('users').child(auth.uid).child('role').val() === 'ADMIN')"
+    }
+  }
+}

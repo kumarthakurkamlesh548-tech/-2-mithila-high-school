@@ -15,6 +15,14 @@ class MithilaApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        // Install Uncaught Exception Handler to log startup crashes
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            Log.e("MithilaApplication", "CRITICAL UNCAUGHT STARTUP CRASH in thread ${thread.name}: ${throwable.message}", throwable)
+            defaultHandler?.uncaughtException(thread, throwable)
+        }
+
         try {
             if (FirebaseApp.getApps(this).isEmpty()) {
                 FirebaseApp.initializeApp(this)
@@ -23,15 +31,20 @@ class MithilaApplication : Application() {
             
             // Gracefully configure Realtime Database after FirebaseApp is ready
             try {
-                if (FirebaseApp.getApps(this).isNotEmpty()) {
-                    val db = FirebaseDatabase.getInstance("https://students-71ec1-default-rtdb.firebaseio.com")
-                    db.setPersistenceEnabled(true)
-                    Log.d("MithilaApplication", "Firebase Realtime Database configured with persistence")
+                val app = FirebaseApp.getInstance()
+                if (app != null) {
+                    val db = FirebaseDatabase.getInstance(app, "https://students-71ec1-default-rtdb.firebaseio.com")
+                    try {
+                        db.setPersistenceEnabled(true)
+                        Log.d("MithilaApplication", "Firebase Realtime Database persistence configured")
+                    } catch (pe: Throwable) {
+                        Log.w("MithilaApplication", "Firebase Realtime Database persistence notice: ${pe.message}")
+                    }
                 }
-            } catch (e: Exception) {
-                Log.w("MithilaApplication", "Firebase Realtime Database optional persistence setup notice: ${e.message}")
+            } catch (e: Throwable) {
+                Log.w("MithilaApplication", "Firebase Realtime Database setup notice: ${e.message}")
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e("MithilaApplication", "Error initializing FirebaseApp: ${e.message}", e)
         }
     }

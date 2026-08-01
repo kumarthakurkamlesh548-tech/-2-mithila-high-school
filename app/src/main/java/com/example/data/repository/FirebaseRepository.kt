@@ -755,12 +755,26 @@ class FirebaseRepository {
                                     val senderName = child.child("senderName").getValue(String::class.java) ?: "User"
                                     val senderRole = child.child("senderRole").getValue(String::class.java) ?: "STUDENT"
                                     val messageText = child.child("messageText").getValue(String::class.java) ?: ""
-                                    val timestamp = child.child("timestamp").getValue(Long::class.java) ?: System.currentTimeMillis()
+                                    
+                                    val timestampObj = child.child("timestamp").value
+                                    val timestamp = when (timestampObj) {
+                                        is Long -> timestampObj
+                                        is Number -> timestampObj.toLong()
+                                        is String -> timestampObj.toLongOrNull() ?: System.currentTimeMillis()
+                                        else -> System.currentTimeMillis()
+                                    }
+                                    
                                     val formattedTime = child.child("formattedTime").getValue(String::class.java) ?: ""
                                     val replyToId = child.child("replyToId").getValue(String::class.java) ?: ""
                                     val replyToText = child.child("replyToText").getValue(String::class.java) ?: ""
                                     val replyToSender = child.child("replyToSender").getValue(String::class.java) ?: ""
-                                    val isDeleted = child.child("isDeleted").getValue(Boolean::class.java) ?: false
+                                    
+                                    val isDeletedObj = child.child("isDeleted").value
+                                    val isDeleted = when (isDeletedObj) {
+                                        is Boolean -> isDeletedObj
+                                        is String -> isDeletedObj.toBoolean()
+                                        else -> false
+                                    }
 
                                     list.add(
                                         ChatMessage(

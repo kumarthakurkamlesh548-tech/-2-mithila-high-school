@@ -395,7 +395,8 @@ class FirebaseRepository {
         val registration = fs.collection(USERS_COLLECTION)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "getAllUsersFlow snapshot error: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents?.mapNotNull { doc ->
@@ -564,7 +565,8 @@ class FirebaseRepository {
         val registration = fs.collection(RESULTS_COLLECTION)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "getResultsFlow snapshot error: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents?.mapNotNull { documentToResult(it.id, it.data) } ?: emptyList()
@@ -666,7 +668,8 @@ class FirebaseRepository {
         val registration = fs.collection(DOUBTS_COLLECTION)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "getDoubtsFlow snapshot error: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents?.mapNotNull { documentToDoubt(it.id, it.data) } ?: emptyList()
@@ -822,7 +825,8 @@ class FirebaseRepository {
             .whereEqualTo("roomId", roomId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "getChatMessagesFlow snapshot error: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents?.mapNotNull { doc ->
@@ -896,7 +900,8 @@ class FirebaseRepository {
         val registration = fs.collection(CHAT_ROOMS_COLLECTION)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "getChatRoomsFlow snapshot error: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents?.mapNotNull { doc ->
@@ -953,7 +958,8 @@ class FirebaseRepository {
         val registration = fs.collection(USER_PRESENCE_COLLECTION)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.w(TAG, "getUserPresenceFlow snapshot error: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents?.mapNotNull { doc ->

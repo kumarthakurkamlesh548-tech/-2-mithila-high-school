@@ -149,49 +149,77 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
-            firebaseRepository.getDoubtsFlow().collect { remoteDoubts ->
-                remoteDoubts.forEach { remoteDoubt ->
-                    repository.askDoubt(remoteDoubt)
-                }
+            try {
+                firebaseRepository.getDoubtsFlow()
+                    .catch { e -> android.util.Log.w("MainViewModel", "getDoubtsFlow error: ${e.message}") }
+                    .collect { remoteDoubts ->
+                        remoteDoubts.forEach { remoteDoubt ->
+                            repository.askDoubt(remoteDoubt)
+                        }
+                    }
+            } catch (e: Throwable) {
+                android.util.Log.w("MainViewModel", "getDoubtsFlow collection failed: ${e.message}")
             }
         }
 
         // Initialize default Chat Rooms
         viewModelScope.launch {
-            val defaultRooms = listOf(
-                ChatRoom(id = "group_general", title = "General Discussions", isGroup = true),
-                ChatRoom(id = "group_class_10", title = "Class 10 Group", isGroup = true),
-                ChatRoom(id = "group_class_12", title = "Class 12 Group", isGroup = true),
-                ChatRoom(id = "group_teachers", title = "Faculty & Teachers Lounge", isGroup = true)
-            )
-            repository.saveChatRooms(defaultRooms)
-            defaultRooms.forEach { firebaseRepository.createOrUpdateChatRoom(it) }
+            try {
+                val defaultRooms = listOf(
+                    ChatRoom(id = "group_general", title = "General Discussions", isGroup = true),
+                    ChatRoom(id = "group_class_10", title = "Class 10 Group", isGroup = true),
+                    ChatRoom(id = "group_class_12", title = "Class 12 Group", isGroup = true),
+                    ChatRoom(id = "group_teachers", title = "Faculty & Teachers Lounge", isGroup = true)
+                )
+                repository.saveChatRooms(defaultRooms)
+                defaultRooms.forEach { firebaseRepository.createOrUpdateChatRoom(it) }
+            } catch (e: Throwable) {
+                android.util.Log.w("MainViewModel", "Chat rooms initialization notice: ${e.message}")
+            }
         }
 
         // Collect Chat Rooms real-time
         viewModelScope.launch {
-            firebaseRepository.getChatRoomsFlow().collect { remoteRooms ->
-                if (remoteRooms.isNotEmpty()) {
-                    repository.saveChatRooms(remoteRooms)
-                    _chatRooms.value = remoteRooms
-                }
+            try {
+                firebaseRepository.getChatRoomsFlow()
+                    .catch { e -> android.util.Log.w("MainViewModel", "getChatRoomsFlow error: ${e.message}") }
+                    .collect { remoteRooms ->
+                        if (remoteRooms.isNotEmpty()) {
+                            repository.saveChatRooms(remoteRooms)
+                            _chatRooms.value = remoteRooms
+                        }
+                    }
+            } catch (e: Throwable) {
+                android.util.Log.w("MainViewModel", "getChatRoomsFlow collection failed: ${e.message}")
             }
         }
 
         // Collect Room Messages real-time when activeRoomId changes
         viewModelScope.launch {
-            activeRoomId.collectLatest { roomId ->
-                firebaseRepository.getChatMessagesFlow(roomId).collect { msgs ->
-                    repository.saveChatMessages(msgs)
-                    _currentRoomMessages.value = msgs
+            try {
+                activeRoomId.collectLatest { roomId ->
+                    firebaseRepository.getChatMessagesFlow(roomId)
+                        .catch { e -> android.util.Log.w("MainViewModel", "getChatMessagesFlow error: ${e.message}") }
+                        .collect { msgs ->
+                            repository.saveChatMessages(msgs)
+                            _currentRoomMessages.value = msgs
+                        }
                 }
+            } catch (e: Throwable) {
+                android.util.Log.w("MainViewModel", "getChatMessagesFlow collection failed: ${e.message}")
             }
         }
 
         // Collect Presences real-time
         viewModelScope.launch {
-            firebaseRepository.getUserPresenceFlow().collect { presences ->
-                _userPresences.value = presences
+            try {
+                firebaseRepository.getUserPresenceFlow()
+                    .catch { e -> android.util.Log.w("MainViewModel", "getUserPresenceFlow error: ${e.message}") }
+                    .collect { presences ->
+                        _userPresences.value = presences
+                    }
+            } catch (e: Throwable) {
+                android.util.Log.w("MainViewModel", "getUserPresenceFlow collection failed: ${e.message}")
             }
         }
     }
